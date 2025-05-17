@@ -1,0 +1,105 @@
+/* /public/css/styles.css */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: url('../img/Fondoperros.png') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 40px;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.nav-buttons .btn {
+    background: transparent;
+    color: #fff;
+    border: 2px solid #fff;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 20px;
+    transition: all 0.3s;
+}
+
+.nav-buttons .btn:hover {
+    background-color: #fff;
+    color: #000;
+}
+
+.hero-content {
+    text-align: center;
+    margin-top: 120px;
+}
+
+.hero-content h1 {
+    font-size: 64px;
+    margin-bottom: 10px;
+}
+
+.hero-content p {
+    font-size: 20px;
+    margin-bottom: 30px;
+}
+
+.btn-primary {
+    background-color: #ff3b5c;
+    color: #fff;
+    padding: 14px 28px;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 30px;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #e72a4a;
+}
+
+
+/* css registro */
+
+.form-container {
+    max-width: 500px;
+    margin: 60px auto;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 30px;
+    border-radius: 16px;
+    color: #333;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.form-container h2,
+.form-container h3 {
+    text-align: center;
+}
+
+.form-container input,
+.form-container select,
+.form-container button {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+}
+
+.form-container button {
+    background-color: #ff3b5c;
+    color: white;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+}
+
+.form-container button:hover {
+    background-color: #e72a4a;
+}
