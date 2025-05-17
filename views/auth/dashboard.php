@@ -1,44 +1,56 @@
-<?php
-session_start();
-if (!isset($_SESSION['usuario'])) {
-    header('Location: login.php');
-    exit;
-}
-$usuario = $_SESSION['usuario'];
-?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dashboard - DogMatch</title>
-    <!-- Bootstrap CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- CSS exclusivo -->
-    <link rel="stylesheet" href="../../public/css/dashboard.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard - DogMatch</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="../../public/css/dashboard.css">
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary px-4">
-    <a class="navbar-brand" href="#">DogMatch</a>
-    <div class="ms-auto">
-        <span class="navbar-text me-3">Bienvenido, <?= htmlspecialchars($usuario['nombre']) ?>!</span>
-        <a href="logout.php" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
-    </div>
-</nav>
+<!-- Sidebar -->
+<div class="d-flex">
+  <nav id="sidebar" class="bg-primary text-white p-3 vh-100 position-fixed">
+    <h4 class="text-center mb-4">DogMatch</h4>
+    <ul class="nav flex-column">
+      <li class="nav-item mb-2">
+        <a href="#" class="nav-link text-white"><i class="bi bi-house me-2"></i>Inicio</a>
+      </li>
+      <li class="nav-item mb-2">
+        <a href="#modalAgregarPerro" class="nav-link text-white" data-bs-toggle="modal"><i class="bi bi-plus-circle me-2"></i>Registrar Perro</a>
+      </li>
+      <li class="nav-item mb-2">
+        <a href="#" class="nav-link text-white"><i class="bi bi-heart-pulse me-2"></i>Ver Matches</a>
+      </li>
+      <li class="nav-item mb-2">
+        <a href="#" class="nav-link text-white"><i class="bi bi-gear me-2"></i>Configuración</a>
+      </li>
+      <li class="nav-item mt-4">
+        <a href="logout.php" class="nav-link text-white"><i class="bi bi-box-arrow-right me-2"></i>Salir</a>
+      </li>
+    </ul>
+  </nav>
 
-<div class="container my-4">
-
-    <h2 class="mb-4">Tus perros registrados</h2>
-
-    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAgregarPerro">
-        <i class="bi bi-plus-circle"></i> Añadir nuevo perro
+  <!-- Contenido -->
+   
+   <!-- Botón toggle para pantallas pequeñas -->
+    <button class="btn btn-outline-primary d-md-none mb-3" id="toggleSidebar">
+      <i class="bi bi-list"></i> Menú
     </button>
 
+      <div class="content-wrapper container-fluid">
+    <h2 class="mb-4">Tus perros registrados</h2>
+
     <div id="listaPerros" class="row">
-        <?php
+      <?php
         require_once __DIR__ . '/../../models/Perro.php';
+        session_start();
+        if (!isset($_SESSION['usuario'])) {
+            header('Location: login.php'); exit;
+        }
+        $usuario = $_SESSION['usuario'];
         $perroModel = new Perro();
         $perros = $perroModel->obtenerPorUsuarioId($usuario['id']); 
         if (empty($perros)) {
@@ -56,57 +68,54 @@ $usuario = $_SESSION['usuario'];
                 echo '</div></div></div>';
             }
         }
-        ?>
+      ?>
     </div>
-
+  </div>
 </div>
 
-<!-- Modal para agregar perro -->
-<div class="modal fade" id="modalAgregarPerro" tabindex="-1" aria-labelledby="modalAgregarPerroLabel" aria-hidden="true">
+<!-- Modal -->
+<div class="modal fade" id="modalAgregarPerro" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" action="../../public/index.php?accion=registrarPerro" method="POST" enctype="multipart/form-data">
       <div class="modal-header">
-        <h5 class="modal-title" id="modalAgregarPerroLabel">Agregar nuevo perro</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <h5 class="modal-title" id="modalLabel">Agregar nuevo perro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-          <div class="mb-3">
-            <label for="nombre_perro" class="form-label">Nombre del perro</label>
-            <input type="text" class="form-control" id="nombre_perro" name="nombre_perro" required />
-          </div>
-          <div class="mb-3">
-            <label for="raza" class="form-label">Raza</label>
-            <input type="text" class="form-control" id="raza" name="raza" required />
-          </div>
-          <div class="mb-3">
-            <label for="edad" class="form-label">Edad</label>
-            <input type="number" class="form-control" id="edad" name="edad" required min="0" />
-          </div>
-          <div class="mb-3">
-            <label for="sexo" class="form-label">Sexo</label>
-            <select class="form-select" id="sexo" name="sexo" required>
-              <option value="">Selecciona</option>
-              <option value="Macho">Macho</option>
-              <option value="Hembra">Hembra</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="foto" class="form-label">Foto</label>
-            <input type="file" class="form-control" id="foto" name="foto" accept="image/*" required />
-          </div>
+        <div class="mb-3">
+          <label for="nombre_perro" class="form-label">Nombre</label>
+          <input type="text" class="form-control" name="nombre_perro" required>
+        </div>
+        <div class="mb-3">
+          <label for="raza" class="form-label">Raza</label>
+          <input type="text" class="form-control" name="raza" required>
+        </div>
+        <div class="mb-3">
+          <label for="edad" class="form-label">Edad</label>
+          <input type="number" class="form-control" name="edad" required>
+        </div>
+        <div class="mb-3">
+          <label for="sexo" class="form-label">Sexo</label>
+          <select class="form-select" name="sexo" required>
+            <option value="">Selecciona</option>
+            <option value="Macho">Macho</option>
+            <option value="Hembra">Hembra</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="foto" class="form-label">Foto</label>
+          <input type="file" class="form-control" name="foto" accept="image/*" required>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" class="btn btn-primary">Guardar perro</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Bootstrap JS Bundle CDN (incluye Popper) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Tu JS exclusivo -->
 <script src="../../public/js/dashboard.js"></script>
-
 </body>
 </html>

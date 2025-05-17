@@ -30,4 +30,23 @@ class Perro {
         $stmt->execute([':usuario_id' => $usuarioId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+
+    public function buscarCompatibles($usuario_id) {
+    $stmt = $this->db->prepare("
+        SELECT * FROM perros 
+        WHERE usuario_id != :usuario_id 
+        AND sexo != (
+          SELECT sexo FROM perros WHERE usuario_id = :usuario_id LIMIT 1
+        )
+        AND ABS(edad - (
+          SELECT edad FROM perros WHERE usuario_id = :usuario_id LIMIT 1
+        )) <= 2
+    ");
+    $stmt->execute(['usuario_id' => $usuario_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+}
+
+
