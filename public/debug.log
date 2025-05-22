@@ -1,0 +1,12 @@
+Array
+(
+    [nombre_dueño] => Kevin
+    [email] => kevingaviria20@hotmail.com
+    [password] => 12345
+    [telefono] => 3023380272
+    [nombre_perro] => toby
+    [raza] => pequinez
+    [edad] => 34
+    [sexo] => Macho
+    [registrar] => 
+)
