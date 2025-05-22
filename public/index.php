@@ -58,5 +58,12 @@ switch ($action) {
     default:
         header('Location: ../views/auth/index.php');
         break;
+
+        case 'verMatches':
+  require_once '../controllers/MatchController.php';
+  $controller = new MatchController();
+  $controller->index();
+  break;
+
 }
 
