@@ -9,9 +9,7 @@
 <body>
     <div class="form-container">
         <h2>Crear cuenta</h2>
-         <form action="/public/index.php?action=registrar" method="POST" enctype="multipart/form-data">
-
-
+        <form action="/public/index.php?action=registrar" method="POST" enctype="multipart/form-data">
 
             <!-- Datos del dueño -->
             <h3>Datos del dueño</h3>
@@ -23,8 +21,23 @@
             <!-- Datos del perro -->
             <h3>Datos del perro</h3>
             <input type="text" name="nombre_perro" placeholder="Nombre del perro" required>
-            <input type="text" name="raza" placeholder="Raza" required>
-            <input type="number" name="edad" placeholder="Edad (años)" min="0" required>
+
+            <select name="raza" required>
+                <option value="">Selecciona la raza</option>
+                <option value="Labrador Retriever">Labrador Retriever</option>
+                <option value="French Poodle">French Poodle</option>
+                <option value="Bulldog Francés">Bulldog Francés</option>
+                <option value="Golden Retriever">Golden Retriever</option>
+                <option value="Shih Tzu">Shih Tzu</option>
+                <option value="Yorkshire Terrier">Yorkshire Terrier</option>
+                <option value="Pastor Alemán">Pastor Alemán</option>
+                <option value="Beagle">Beagle</option>
+                <option value="Chihuahua">Chihuahua</option>
+                <option value="Cocker Spaniel">Cocker Spaniel</option>
+                <option value="Criollo">Criollo</option>
+            </select>
+
+            <input type="number" name="edad" placeholder="Edad (en meses)" min="1" required>
 
             <select name="sexo" required>
                 <option value="">Selecciona sexo</option>
@@ -32,8 +45,8 @@
                 <option value="Hembra">Hembra</option>
             </select>
 
-            <label>Foto del perro:</label>
-            <input type="file" name="foto" accept="image/*" required>
+            <label for="foto">Agregar foto:</label>
+            <input type="file" id="foto" name="foto" accept="image/*" required>
 
             <button type="submit" name="registrar">Registrarse</button>
         </form>
@@ -42,5 +55,3 @@
     </div>
 </body>
 </html>
-
-

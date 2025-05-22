@@ -29,7 +29,7 @@
       <div class="ub1">&#128273; Ingrese correo</div>
       <input type="email" name="email" placeholder="Ingresar correo" required>
 
-      <div class="ub1">&#128274; Ingresar password</div>
+      <div class="ub1">&#128274; Ingresar Contraseña</div>
       <input type="password" name="password" placeholder="Ingresar contraseña..." required>
 
       <div class="ub1">
@@ -42,7 +42,7 @@
       </div>
 
       <div class="ref1">
-         <p>¿No tienes cuenta? <a href="register.php">Regístrate aquí</a></p>
+         <p>¿No tienes cuenta? <a href="registro.php">Regístrate aquí</a></p>
       </div>
     </form>
   </div>
