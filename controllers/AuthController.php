@@ -13,11 +13,21 @@ class AuthController {
             header('Location: ../views/auth/registro.php?error=Faltan datos obligatorios');
             exit;
         }
+            // Subir imagen del perro
+            $fotoNombre = basename($files['foto']['name']);
+            $rutaDestino = __DIR__ . '/../public/img/' . $fotoNombre;
 
-        // Subir imagen del perro
-        $fotoNombre = basename($files['foto']['name']);
-        $rutaDestino = __DIR__ . '/../public/img/' . $fotoNombre;
-        move_uploaded_file($files['foto']['tmp_name'], $rutaDestino);
+            if (!move_uploaded_file($files['foto']['tmp_name'], $rutaDestino)) {
+                header('Location: ../views/auth/registro.php?error=Error al subir la imagen');
+                exit;
+            }
+
+          // Validar si el email ya existe
+    $usuarioModel = new Usuario();
+    if ($usuarioModel->obtenerPorEmail($data['email'])) {
+        header('Location: ../views/auth/registro.php?error=El correo ya está registrado');
+        exit;
+    }
 
         // Guardar usuario
         $usuarioModel = new Usuario();
@@ -26,7 +36,10 @@ class AuthController {
             'email' => $data['email'],
             'password' => password_hash($data['password'], PASSWORD_DEFAULT),
             'telefono' => $data['telefono']
+            
         ]);
+
+        
 
         // Guardar perro
         $perroModel = new Perro();

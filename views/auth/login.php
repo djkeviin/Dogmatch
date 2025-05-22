@@ -19,7 +19,6 @@
 
 
 
-
  <?php if (isset($_GET['error'])): ?>
       <p style="color: red;"><?= htmlspecialchars($_GET['error']) ?></p>
     <?php endif; ?>

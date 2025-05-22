@@ -1,4 +1,11 @@
+
 <?php
+
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 
 require_once __DIR__ . '/../controllers/PerroController.php';
@@ -41,7 +48,15 @@ switch ($action) {
         }
         break;
 
+        if ($_GET['accion'] == 'verMatch') {
+    require_once '../views/match/ver_match.php';
+}
+    case 'dashboard':
+        require_once '../views/auth/dashboard.php';
+        break;
+
     default:
         header('Location: ../views/auth/index.php');
         break;
 }
+

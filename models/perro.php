@@ -30,4 +30,24 @@ class Perro {
         $stmt->execute([':usuario_id' => $usuarioId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+
+public static function buscarPerrosCompatibles($mis_perros) {
+    $conexion = Conexion::getConexion();
+    $matches = [];
+
+    foreach ($mis_perros as $mi_perro) {
+        $stmt = $conexion->prepare("SELECT * FROM perros WHERE raza = ? AND sexo != ? AND usuario_id != ?");
+        $stmt->execute([$mi_perro['raza'], $mi_perro['sexo'], $mi_perro['usuario_id']]);
+
+        $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($resultados) {
+            $matches = array_merge($matches, $resultados);
+        }
+    }
+
+    return $matches;
+}
+
+
 }
