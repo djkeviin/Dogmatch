@@ -20,9 +20,6 @@
     <h4 class="text-center mb-4">DogMatch</h4>
     <ul class="nav flex-column">
       <li class="nav-item mb-2">
-        <a href="#" class="nav-link text-white"><i class="bi bi-house me-2"></i>Inicio</a>
-      </li>
-      <li class="nav-item mb-2">
         <a href="#modalAgregarPerro" class="nav-link text-white" data-bs-toggle="modal"><i class="bi bi-plus-circle me-2"></i>Registrar Perro</a>
       </li>
       <li>

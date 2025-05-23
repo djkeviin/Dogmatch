@@ -5,8 +5,54 @@
     <meta charset="UTF-8">
     <title>Registro | DogMatch</title>
     <link rel="stylesheet" href="../../public/css/styles.css">
+
 </head>
 <body>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<?php
+session_start();
+if (isset($_SESSION['mensaje'])) {
+    $mensaje = $_SESSION['mensaje'];
+    unset($_SESSION['mensaje']);
+    echo "
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            icon: 'success',
+            title: '¡Registro exitoso!',
+            text: " . json_encode($mensaje) . ",
+            confirmButtonText: 'Aceptar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = 'login.php';
+            }
+        });
+    });
+    </script>
+    ";
+}
+
+if (isset($_SESSION['mensaje_error'])) {
+    $mensaje_error = $_SESSION['mensaje_error'];
+    unset($_SESSION['mensaje_error']);
+    echo "
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: " . json_encode($mensaje_error) . ",
+            confirmButtonText: 'Aceptar'
+        });
+    });
+    </script>
+    ";
+}
+?>
+
+
     <div class="form-container">
         <h2>Crear cuenta</h2>
         <form action="/public/index.php?action=registrar" method="POST" enctype="multipart/form-data">
@@ -53,5 +99,8 @@
 
         <p>¿Ya tienes cuenta? <a href="login.php">Inicia sesión</a></p>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 </body>
 </html>

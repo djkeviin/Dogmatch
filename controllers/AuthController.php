@@ -52,8 +52,11 @@ class AuthController {
             'usuario_id' => $usuarioId
         ]);
 
-        header('Location: ../views/auth/login.php?mensaje=Cuenta creada correctamente');
+            session_start();
+        $_SESSION['mensaje'] = "Tu cuenta fue creada correctamente. Ahora puedes iniciar sesión.";
+        header('Location: ../views/auth/registro.php');
         exit;
+
     }
 
     public function login($email, $password) {
