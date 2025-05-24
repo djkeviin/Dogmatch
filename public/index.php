@@ -1,4 +1,3 @@
-
 <?php
 
 
@@ -12,6 +11,7 @@ require_once __DIR__ . '/../controllers/PerroController.php';
 
 $perroController = new PerroController();
 
+// Manejo de registrarPerro
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['accion']) && $_GET['accion'] === 'registrarPerro') {
     if (!isset($_SESSION['usuario'])) {
         header('Location: login.php');
@@ -22,12 +22,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['accion']) && $_GET['ac
     exit;
 }
 
-
 require_once __DIR__ . '/../controllers/AuthController.php';
 
 $authController = new AuthController();
 
-$action = $_GET['action'] ?? '';
+// Mueve este if antes o después del switch
+if (isset($_GET['accion']) && $_GET['accion'] == 'verMatch') {
+    require_once '../views/match/ver_match.php';
+    exit;  // Para evitar que siga con el switch
+}
+
+$action = isset($_GET['action']) ? $_GET['action'] : '';
 
 switch ($action) {
     case 'registrar':
@@ -40,17 +45,14 @@ switch ($action) {
 
     case 'login':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
+            $email = isset($_POST['email']) ? $_POST['email'] : '';
+            $password = isset($_POST['password']) ? $_POST['password'] : '';
             $authController->login($email, $password);
         } else {
             header('Location: ../views/auth/login.php');
         }
         break;
 
-        if ($_GET['accion'] == 'verMatch') {
-    require_once '../views/match/ver_match.php';
-}
     case 'dashboard':
         require_once '../views/auth/dashboard.php';
         break;
@@ -59,4 +61,3 @@ switch ($action) {
         header('Location: ../views/auth/index.php');
         break;
 }
-

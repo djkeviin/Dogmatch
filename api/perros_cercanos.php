@@ -6,18 +6,20 @@ session_start();
 require_once __DIR__ . '/../config/conexion.php';
 $db = Conexion::getConexion();
 
-$lat = $_GET['lat'] ?? null;
-$lng = $_GET['lng'] ?? null;
-$rango = $_GET['rango'] ?? 5;
+$lat = isset($_GET['lat']) ? $_GET['lat'] : null;
+$lng = isset($_GET['lng']) ? $_GET['lng'] : null;
+$rango = isset($_GET['rango']) ? $_GET['rango'] : 5;
+
 
 if ($lat === null || $lng === null) {
     echo json_encode([]);
     exit;
 }
 
-$usuarioId = $_SESSION['usuario']['id'] ?? null;
+$usuarioId = isset($_SESSION['usuario']['id']) ? $_SESSION['usuario']['id'] : null;
 
-$sql = "
+
+$sql = "      
     SELECT nombre, raza, latitud, longitud, foto,
         (6371 * ACOS(
             COS(RADIANS(:lat)) * COS(RADIANS(latitud)) *
