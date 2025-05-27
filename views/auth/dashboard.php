@@ -20,6 +20,11 @@
     <h4 class="text-center mb-4">DogMatch</h4>
     <ul class="nav flex-column">
       <li class="nav-item mb-2">
+     <a href="../auth/perfil.php" class="nav-link text-white">
+      <i class="bi bi-person-bounding-box me-2"></i>Ver perfil de mi perro
+     </a>
+      </li>
+      <li class="nav-item mb-2">
         <a href="#modalAgregarPerro" class="nav-link text-white" data-bs-toggle="modal"><i class="bi bi-plus-circle me-2"></i>Registrar Perro</a>
       </li>
       <li>
@@ -49,39 +54,15 @@
     </button>
 
       <div class="content-wrapper container-fluid">
-    <h2 class="mb-4">Tus perros registrados</h2>
-
-    <div id="listaPerros" class="row">
-      <?php
-        require_once __DIR__ . '/../../models/Perro.php';
-        session_start();
-        if (!isset($_SESSION['usuario'])) {
-            header('Location: login.php'); exit;
-        }
-        $usuario = $_SESSION['usuario'];
-        $perroModel = new Perro();
-        $perros = $perroModel->obtenerPorUsuarioId($usuario['id']); 
-        if (empty($perros)) {
-            echo '<p>No tienes perros registrados.</p>';
-        } else {
-            foreach ($perros as $perro) {
-                echo '<div class="col-md-4 mb-3">';
-                echo '<div class="card shadow-sm">';
-                echo '<img src="../../public/img/' . htmlspecialchars($perro['foto']) . '" class="card-img-top" alt="Foto de ' . htmlspecialchars($perro['nombre']) . '">';
-                echo '<div class="card-body">';
-                echo '<h5 class="card-title">' . htmlspecialchars($perro['nombre']) . '</h5>';
-                echo '<p class="card-text">Raza: ' . htmlspecialchars($perro['raza']) . '</p>';
-                echo '<p class="card-text">Edad: ' . htmlspecialchars($perro['edad']) . '</p>';
-                echo '<p class="card-text">Sexo: ' . htmlspecialchars($perro['sexo']) . '</p>';
-                echo '</div></div></div>';
-            }
-        }
-      ?>
+        <h2 class="mb-4">Bienvenido a DogMatch</h2>
+        <p>Gestiona el perfil de tu perro desde el menú lateral.</p>
+    
     </div>
   </div>
 </div>
 
-<!-- Modal -->
+<!-- Modal Registrar Perro (solo si no tiene un perro) -->
+<?php if (empty($perros)): ?>
 <div class="modal fade" id="modalAgregarPerro" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" action="../../public/index.php?accion=registrarPerro" method="POST" enctype="multipart/form-data">
@@ -90,6 +71,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
+        <!-- Campos de formulario -->
         <div class="mb-3">
           <label for="nombre_perro" class="form-label">Nombre</label>
           <input type="text" class="form-control" name="nombre_perro" required>
@@ -122,6 +104,8 @@
     </form>
   </div>
 </div>
+<?php endif; ?>
+
 
 <!-- Modal para mostrar los perros compatibles -->
 <div class="modal fade" id="modalMatches" tabindex="-1" aria-labelledby="modalMatchesLabel" aria-hidden="true">
@@ -138,7 +122,7 @@
 
           $perroModel = new Perro();
           $usuarioId = $_SESSION['usuario']['id'];
-          $mis_perros = $perroModel->obtenerPorUsuarioId($usuarioId);
+          $mis_perros = $perroModel->obtenerPerfilCompletoPorUsuarioId($usuarioId);
           $matches = $perroModel->buscarPerrosCompatibles($mis_perros);
           ?>
 
@@ -205,6 +189,18 @@
 <script src="../../public/js/dashboard.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="../../public/js/ubicacion.js"></script>
+
+<?php if (isset($_GET['registro']) && $_GET['registro'] === 'exitoso'): ?>
+  <script>
+    Swal.fire({
+      icon: 'success',
+      title: '¡Perro registrado!',
+      text: 'El perfil del perro se ha creado exitosamente.',
+      confirmButtonColor: '#3085d6',
+      confirmButtonText: 'OK'
+    });
+  </script>
+<?php endif; ?>
 
 </body>
 </html>

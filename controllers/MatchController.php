@@ -9,7 +9,7 @@ if (!isset($_SESSION['usuario_id'])) {
 
 $usuario_id = $_SESSION['usuario_id'];
 $perroModel = new Perro();
-$mis_perros = $perroModel->obtenerPorUsuarioId($usuario_id);
+$mis_perros = $perroModel->obtenerPerfilCompletoPorUsuarioId($usuario_id);
 
 $matches = [];
 
@@ -18,3 +18,4 @@ if (!empty($mis_perros)) {
 }
 
 include 'views/auth/ver_match.php';
+
