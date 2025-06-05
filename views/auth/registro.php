@@ -3,13 +3,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro | DogMatch</title>
+    
+    <!-- Estilos CSS -->
     <link rel="stylesheet" href="../../public/css/styles.css">
-
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 </head>
 <body>
 
+<!-- Scripts base -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <?php
 session_start();
@@ -52,11 +59,9 @@ if (isset($_SESSION['mensaje_error'])) {
 }
 ?>
 
-
     <div class="form-container">
         <h2>Crear cuenta</h2>
         <form action="/public/index.php?action=registrar" method="POST" enctype="multipart/form-data">
-
             <!-- Datos del dueño -->
             <h3>Datos del dueño</h3>
             <input type="text" name="nombre_dueño" placeholder="Nombre completo" required>
@@ -67,21 +72,22 @@ if (isset($_SESSION['mensaje_error'])) {
             <!-- Datos del perro -->
             <h3>Datos del perro</h3>
             <input type="text" name="nombre_perro" placeholder="Nombre del perro" required>
-
-            <select name="raza" required>
-                <option value="">Selecciona la raza</option>
-                <option value="Labrador Retriever">Labrador Retriever</option>
-                <option value="French Poodle">French Poodle</option>
-                <option value="Bulldog Francés">Bulldog Francés</option>
-                <option value="Golden Retriever">Golden Retriever</option>
-                <option value="Shih Tzu">Shih Tzu</option>
-                <option value="Yorkshire Terrier">Yorkshire Terrier</option>
-                <option value="Pastor Alemán">Pastor Alemán</option>
-                <option value="Beagle">Beagle</option>
-                <option value="Chihuahua">Chihuahua</option>
-                <option value="Cocker Spaniel">Cocker Spaniel</option>
-                <option value="Criollo">Criollo</option>
+            
+            <select class="raza-select" name="raza" required>
+                <option value="">Buscar raza...</option>
             </select>
+
+            <!-- Tarjeta de información de la raza -->
+            <div class="raza-card">
+                <h4 class="raza-nombre"></h4>
+                <p class="raza-descripcion"></p>
+                <div>
+                    <p><strong>Tamaño:</strong> <span class="raza-tamanio"></span></p>
+                    <p><strong>Grupo:</strong> <span class="raza-grupo"></span></p>
+                    <p><strong>Características:</strong></p>
+                    <div class="caracteristicas-lista"></div>
+                </div>
+            </div>
 
             <input type="number" name="edad" placeholder="Edad (en meses)" min="1" required>
 
@@ -100,7 +106,7 @@ if (isset($_SESSION['mensaje_error'])) {
         <p>¿Ya tienes cuenta? <a href="login.php">Inicia sesión</a></p>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+    <!-- Script personalizado -->
+    <script src="../../public/js/registro.js"></script>
 </body>
 </html>

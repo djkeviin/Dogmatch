@@ -177,13 +177,37 @@ body {
 }
 
 /* Preview de imágenes */
-.preview-image {
+.preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    min-height: 100px;
+    padding: 10px;
+    border: 2px dashed #ddd;
+    border-radius: 5px;
+}
+
+.preview-image-container {
+    position: relative;
     width: 100px;
     height: 100px;
-    object-fit: cover;
-    border-radius: 8px;
     margin: 5px;
-    border: 2px solid #dee2e6;
+}
+
+.preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 2px solid #ddd;
+    transition: transform 0.2s;
+}
+
+.preview-image:hover {
+    transform: scale(1.1);
+    cursor: pointer;
+    border-color: #ff3b5c;
 }
 
 /* Notificaciones */
@@ -247,4 +271,57 @@ body {
     .gallery-img {
         height: 150px;
     }
+}
+
+/* Estilos para el selector de razas */
+.raza-option {
+    padding: 8px;
+}
+
+.raza-nombre {
+    font-weight: bold;
+}
+
+.raza-detalle {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.raza-card {
+    display: none;
+    margin-top: 15px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+}
+
+.caracteristicas-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.caracteristica-badge {
+    background-color: #e9ecef;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    color: #495057;
+}
+
+/* Estilos para Select2 personalizado */
+.select2-container--bootstrap-5 .select2-selection {
+    border-color: #ced4da;
+}
+
+.select2-container--bootstrap-5 .select2-selection:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background-color: #0d6efd;
+    color: white;
 } 

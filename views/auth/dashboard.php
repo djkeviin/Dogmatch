@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16,25 +14,27 @@
 
 <!-- Sidebar -->
 <div class="d-flex">
-  <nav id="sidebar" class="bg-primary text-white p-3 vh-100 position-fixed">
+  <nav id="sidebar" class="bg-danger text-white p-3 vh-100 position-fixed">
     <h4 class="text-center mb-4">DogMatch</h4>
     <ul class="nav flex-column">
       <li class="nav-item mb-2">
-     <a href="../auth/perfil.php" class="nav-link text-white">
-      <i class="bi bi-person-bounding-box me-2"></i>Ver perfil de mi perro
-     </a>
+        <a href="../auth/perfil.php" class="nav-link text-white">
+          <i class="bi bi-person-bounding-box me-2"></i>Ver perfil de mi perro
+        </a>
       </li>
       <li class="nav-item mb-2">
-        <a href="#modalAgregarPerro" class="nav-link text-white" data-bs-toggle="modal"><i class="bi bi-plus-circle me-2"></i>Registrar Perro</a>
+        <a href="../match/perros_cards.php" class="nav-link text-white">
+          <i class="bi bi-heart-fill me-2"></i>Buscar Matches (Tinder)
+        </a>
       </li>
       <li>
         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalMapa">
-  <i class="bi bi-geo-alt-fill"></i> Ver perros cercanos
-</button>
+          <i class="bi bi-geo-alt-fill"></i> Ver perros cercanos
+        </button>
       </li>
       <li class="nav-item mb-2">
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalMatches">
-  <i class="bi bi-heart-fill"></i> Ver Match
+          <i class="bi bi-heart-fill"></i> Ver Match
         </button>
       </li>
       <li class="nav-item mb-2">
@@ -60,52 +60,6 @@
     </div>
   </div>
 </div>
-
-<!-- Modal Registrar Perro (solo si no tiene un perro) -->
-<?php if (empty($perros)): ?>
-<div class="modal fade" id="modalAgregarPerro" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content" action="../../public/index.php?accion=registrarPerro" method="POST" enctype="multipart/form-data">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalLabel">Agregar nuevo perro</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <!-- Campos de formulario -->
-        <div class="mb-3">
-          <label for="nombre_perro" class="form-label">Nombre</label>
-          <input type="text" class="form-control" name="nombre_perro" required>
-        </div>
-        <div class="mb-3">
-          <label for="raza" class="form-label">Raza</label>
-          <input type="text" class="form-control" name="raza" required>
-        </div>
-        <div class="mb-3">
-          <label for="edad" class="form-label">Edad</label>
-          <input type="number" class="form-control" name="edad" required>
-        </div>
-        <div class="mb-3">
-          <label for="sexo" class="form-label">Sexo</label>
-          <select class="form-select" name="sexo" required>
-            <option value="">Selecciona</option>
-            <option value="Macho">Macho</option>
-            <option value="Hembra">Hembra</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="foto" class="form-label">Foto</label>
-          <input type="file" class="form-control" name="foto" accept="image/*" required>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="submit" class="btn btn-primary">Guardar</button>
-      </div>
-    </form>
-  </div>
-</div>
-<?php endif; ?>
-
 
 <!-- Modal para mostrar los perros compatibles -->
 <div class="modal fade" id="modalMatches" tabindex="-1" aria-labelledby="modalMatchesLabel" aria-hidden="true">
@@ -166,7 +120,6 @@
         <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
-      <!-- 🔽 Aquí empieza el cuerpo del modal correctamente -->
       <div class="modal-body">
         <div class="mb-3">
           <label for="rangoBusqueda" class="form-label">
@@ -181,26 +134,10 @@
   </div>
 </div>
 
-
-
-
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../../public/js/dashboard.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="../../public/js/ubicacion.js"></script>
-
-<?php if (isset($_GET['registro']) && $_GET['registro'] === 'exitoso'): ?>
-  <script>
-    Swal.fire({
-      icon: 'success',
-      title: '¡Perro registrado!',
-      text: 'El perfil del perro se ha creado exitosamente.',
-      confirmButtonColor: '#3085d6',
-      confirmButtonText: 'OK'
-    });
-  </script>
-<?php endif; ?>
 
 </body>
 </html>

@@ -2,70 +2,81 @@
 require_once __DIR__ . '/../models/Perro.php';
 
 class PerroController {
-    private $perroModel;
+    private $model;
 
     public function __construct() {
-        $this->perroModel = new Perro();
+        $this->model = new Perro();
+    }
+
+    /**
+     * Busca perros según los filtros proporcionados
+     */
+    public function buscar($data) {
+        try {
+            $perros = $this->model->buscarPerros($data);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'data' => $perros
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+
+    /**
+     * Actualiza el perfil de un perro
+     */
+    public function actualizar($data) {
+        return $this->model->actualizar($data);
+    }
+
+    /**
+     * Obtiene el perfil completo de un perro por ID de usuario
+     */
+    public function obtenerPerfil($usuario_id) {
+        return $this->model->obtenerPerfilCompletoPorUsuarioId($usuario_id);
     }
 
     public function verPerfil() {
-        session_start();
-        if (!isset($_SESSION['usuario_id'])) {
+        if (!isset($_SESSION['usuario'])) {
             header('Location: ../views/auth/login.php');
             exit;
         }
 
-        $usuarioId = $_SESSION['usuario_id'];
-        $perfil = $this->perroModel->obtenerPerfilCompletoPorUsuarioId($usuarioId);
+        $usuarioId = $_SESSION['usuario']['id'];
+        $perfil = $this->model->obtenerPerfilCompletoPorUsuarioId($usuarioId);
 
         if (!$perfil) {
             header('Location: ../views/auth/dashboard.php?error=No tienes un perro registrado');
             exit;
         }
 
+        // Obtener las razas del perro
+        $razas = $this->model->obtenerRazasPerro($perfil['id']);
+        $perfil['razas'] = $razas;
+        
+        // Si hay una raza principal, usarla como la raza principal del perro
+        if (!empty($razas)) {
+            foreach ($razas as $raza) {
+                if ($raza['es_principal']) {
+                    $perfil['raza'] = $raza['nombre'];
+                    break;
+                }
+            }
+        }
+
         // Enviar datos a la vista
         include __DIR__ . '/../views/auth/perfil.php';
     }
 
-    public function registrar($data, $files, $usuarioId) {
-        // Validar si ya tiene un perro
-        if ($this->perroModel->obtenerPerfilCompletoPorUsuarioId($usuarioId)) {
-            header('Location: ../views/auth/dashboard.php?error=ya_existe_perro');
-            exit;
-        }
-
-        // Validar campos
-        if (empty($data['nombre_perro']) || empty($data['raza']) || empty($data['edad']) || empty($data['sexo']) || empty($files['foto'])) {
-            header('Location: ../views/auth/dashboard.php?error=Faltan datos obligatorios');
-            exit;
-        }
-
-        // Manejo de foto
-        $fotoNombre = basename($files['foto']['name']);
-        $rutaDestino = __DIR__ . '/../public/img/' . $fotoNombre;
-
-        if (!move_uploaded_file($files['foto']['tmp_name'], $rutaDestino)) {
-            header('Location: ../views/auth/dashboard.php?error=Error al subir la imagen');
-            exit;
-        }
-
-        // Guardar perro en BD
-        $this->perroModel->crear([
-            'nombre' => $data['nombre_perro'],
-            'raza' => $data['raza'],
-            'edad' => $data['edad'],
-            'sexo' => $data['sexo'],
-            'foto' => $fotoNombre,
-            'usuario_id' => $usuarioId
-        ]);
-
-        header('Location: ../views/auth/dashboard.php?mensaje=Perro agregado correctamente');
-        exit;
-    }
-
     public function actualizarPerfil() {
-        session_start();
-
         if (!isset($_SESSION['usuario'])) {
             header('Location: ../views/auth/login.php');
             exit;
@@ -81,7 +92,6 @@ class PerroController {
         // Preparar los datos para actualizar
         $data = [
             'nombre' => $_POST['nombre'],
-            'raza' => $_POST['raza'],
             'edad' => $_POST['edad'],
             'sexo' => $_POST['sexo'],
             'peso' => $_POST['peso'] ?: null,
@@ -93,12 +103,20 @@ class PerroController {
             'vacunas' => $_POST['vacunas'],
             'esterilizado' => isset($_POST['esterilizado']) ? 1 : 0,
             'disponible_apareamiento' => isset($_POST['disponible_apareamiento']) ? 1 : 0,
-            'condiciones_apareamiento' => $_POST['condiciones_apareamiento'],
+            'condiciones_apareamiento' => $_POST['condiciones_apareamiento'] ?? null,
+            'pedigri' => isset($_POST['pedigri']) ? 1 : 0,
             'usuario_id' => $usuario_id
         ];
 
         try {
-            $this->perroModel->actualizar($data);
+            // Si se proporcionó una nueva raza, incluirla en los datos
+            if (!empty($_POST['raza'])) {
+                $data['raza'] = $_POST['raza'];
+            }
+            
+            // Actualizar toda la información del perro
+            $perro_id = $this->model->actualizar($data);
+            
             $_SESSION['mensaje'] = "Perfil actualizado correctamente";
             header('Location: ../views/auth/perfil.php?actualizado=1');
         } catch (Exception $e) {
@@ -106,6 +124,16 @@ class PerroController {
             header('Location: ../views/auth/perfil.php?error=1');
         }
         exit;
+    }
+
+    /**
+     * Busca perros cercanos a una ubicación
+     */
+    public function buscarCercanos($lat, $lng, $rango) {
+        if ($lat === null || $lng === null) {
+            return [];
+        }
+        return $this->model->buscarPerrosCercanos($lat, $lng, $rango);
     }
 }
 

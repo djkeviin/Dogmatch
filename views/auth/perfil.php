@@ -29,8 +29,9 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
     <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="../../public/css/perfil.css" rel="stylesheet">
-    <?php if ($perro['latitud'] && $perro['longitud']): ?>
+    <?php if (isset($perro['latitud']) && isset($perro['longitud']) && $perro['latitud'] && $perro['longitud']): ?>
         <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <?php endif; ?>
 </head>
@@ -91,7 +92,14 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
         </div>
         <h1 class="text-white"><?= htmlspecialchars($perro['nombre']) ?></h1>
         <p class="lead">
-            <?= htmlspecialchars($perro['raza']) ?> • 
+            <?php if (!empty($perro['razas'])): ?>
+                <?php 
+                $razas_nombres = array_map(function($raza) {
+                    return htmlspecialchars($raza['nombre']);
+                }, $perro['razas']);
+                echo implode(' • ', $razas_nombres);
+                ?> • 
+            <?php endif; ?>
             <?= htmlspecialchars($perro['edad']) ?> <?= $perro['edad'] == 1 ? 'mes' : 'meses' ?> • 
             <?= htmlspecialchars($perro['sexo']) ?>
             <?php if ($perro['peso']): ?>
@@ -145,7 +153,7 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                         <?php endif; ?>
                     </div>
 
-                    <?php if ($perro['temperamento']): ?>
+                    <?php if (isset($perro['temperamento']) && $perro['temperamento']): ?>
                         <h4 class="mt-4">Temperamento</h4>
                         <p><?= htmlspecialchars($perro['temperamento']) ?></p>
                     <?php endif; ?>
@@ -224,7 +232,7 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
             </div>
 
             <!-- Ubicación -->
-            <?php if ($perro['latitud'] && $perro['longitud']): ?>
+            <?php if (isset($perro['latitud']) && isset($perro['longitud']) && $perro['latitud'] && $perro['longitud']): ?>
             <div class="card stat-card mb-4">
                 <div class="card-body">
                     <h3 class="card-title">
@@ -262,108 +270,146 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
 </div>
 
 <!-- Modal de Edición de Perfil -->
-<div class="modal fade" id="editarPerfilModal" tabindex="-1" aria-labelledby="editarPerfilModalLabel" aria-hidden="true">
+<div class="modal fade" id="editarPerfilModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Editar Perfil de <?= htmlspecialchars($perro['nombre']) ?></h5>
+                <h5 class="modal-title">Editar Perfil</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="formEditarPerfil" action="../../controllers/PerroController.php" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="actualizar">
-                    <div class="row">
-                        <!-- Información Básica -->
-                        <div class="col-md-6 mb-3">
-                            <h4>Información Básica</h4>
-                            <div class="mb-3">
-                                <label class="form-label">Nombre</label>
-                                <input type="text" class="form-control" name="nombre" value="<?= htmlspecialchars($perro['nombre']) ?>" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Raza</label>
-                                <input type="text" class="form-control" name="raza" value="<?= htmlspecialchars($perro['raza']) ?>" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Edad (meses)</label>
-                                <input type="number" class="form-control" name="edad" value="<?= htmlspecialchars($perro['edad']) ?>" required min="0" max="300">
-                                <div class="form-text text-muted">Ingresa la edad en meses (máximo 300 meses = 25 años)</div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Sexo</label>
-                                <select class="form-control" name="sexo" required>
-                                    <option value="Macho" <?= $perro['sexo'] === 'Macho' ? 'selected' : '' ?>>Macho</option>
-                                    <option value="Hembra" <?= $perro['sexo'] === 'Hembra' ? 'selected' : '' ?>>Hembra</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Peso (kg)</label>
-                                <input type="number" step="0.1" class="form-control" name="peso" value="<?= htmlspecialchars($perro['peso'] ?? '') ?>">
-                            </div>
+                <form action="../../public/index.php?action=actualizar" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="actualizar">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre del perro</label>
+                            <input type="text" class="form-control" name="nombre" value="<?= htmlspecialchars($perro['nombre']) ?>" required>
                         </div>
-
-                        <!-- Características -->
-                        <div class="col-md-6 mb-3">
-                            <h4>Características</h4>
-                            <div class="mb-3">
-                                <label class="form-label">Descripción</label>
-                                <textarea class="form-control" name="descripcion" rows="3"><?= htmlspecialchars($perro['descripcion'] ?? '') ?></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Temperamento</label>
-                                <textarea class="form-control" name="temperamento" rows="2"><?= htmlspecialchars($perro['temperamento'] ?? '') ?></textarea>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" name="sociable_perros" <?= $perro['sociable_perros'] ? 'checked' : '' ?>>
-                                <label class="form-check-label">Sociable con perros</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" name="sociable_personas" <?= $perro['sociable_personas'] ? 'checked' : '' ?>>
-                                <label class="form-check-label">Sociable con personas</label>
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Raza</label>
+                            <select class="form-control raza-select" name="raza" required>
+                                <?php if (!empty($perro['razas'])): ?>
+                                    <?php foreach ($perro['razas'] as $raza): ?>
+                                        <?php if ($raza['es_principal']): ?>
+                                            <option value="<?= htmlspecialchars($raza['raza_id']) ?>" selected>
+                                                <?= htmlspecialchars($raza['nombre']) ?>
+                                            </option>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
                         </div>
+                    </div>
 
-                        <!-- Salud -->
-                        <div class="col-md-12 mb-3">
-                            <h4>Información de Salud</h4>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Estado de Salud</label>
-                                        <textarea class="form-control" name="estado_salud" rows="2"><?= htmlspecialchars($perro['estado_salud'] ?? '') ?></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Vacunas</label>
-                                        <textarea class="form-control" name="vacunas" rows="2"><?= htmlspecialchars($perro['vacunas'] ?? '') ?></textarea>
-                                    </div>
-                                </div>
+                    <!-- Tarjeta de información de la raza -->
+                    <div class="raza-card mb-3">
+                        <h5 class="raza-nombre"></h5>
+                        <p class="raza-descripcion"></p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Tamaño:</strong> <span class="raza-tamanio"></span></p>
+                                <p><strong>Grupo:</strong> <span class="raza-grupo"></span></p>
                             </div>
-                            <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" name="esterilizado" <?= $perro['esterilizado'] ? 'checked' : '' ?>>
-                                <label class="form-check-label">Esterilizado</label>
-                            </div>
-                        </div>
-
-                        <!-- Apareamiento -->
-                        <div class="col-md-12">
-                            <h4>Apareamiento</h4>
-                            <div class="form-check mb-2">
-                                <input type="checkbox" class="form-check-input" name="disponible_apareamiento" <?= $perro['disponible_apareamiento'] ? 'checked' : '' ?>>
-                                <label class="form-check-label">Disponible para apareamiento</label>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Condiciones de apareamiento</label>
-                                <textarea class="form-control" name="condiciones_apareamiento" rows="2"><?= htmlspecialchars($perro['condiciones_apareamiento'] ?? '') ?></textarea>
+                            <div class="col-md-12">
+                                <p><strong>Características:</strong></p>
+                                <div class="caracteristicas-lista"></div>
                             </div>
                         </div>
                     </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Edad (meses)</label>
+                            <input type="number" class="form-control" name="edad" value="<?= htmlspecialchars($perro['edad']) ?>" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Sexo</label>
+                            <select class="form-select" name="sexo" required>
+                                <option value="Macho" <?= $perro['sexo'] == 'Macho' ? 'selected' : '' ?>>Macho</option>
+                                <option value="Hembra" <?= $perro['sexo'] == 'Hembra' ? 'selected' : '' ?>>Hembra</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Peso (kg)</label>
+                            <input type="number" step="0.1" class="form-control" name="peso" value="<?= htmlspecialchars($perro['peso'] ?? '') ?>">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="descripcion" rows="3"><?= htmlspecialchars($perro['descripcion'] ?? '') ?></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Temperamento</label>
+                        <textarea class="form-control" name="temperamento" rows="2"><?= htmlspecialchars($perro['temperamento'] ?? '') ?></textarea>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Estado de Salud</label>
+                            <textarea class="form-control" name="estado_salud" rows="2"><?= htmlspecialchars($perro['estado_salud'] ?? '') ?></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Vacunas</label>
+                            <textarea class="form-control" name="vacunas" rows="2"><?= htmlspecialchars($perro['vacunas'] ?? '') ?></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Foto de perfil</label>
+                            <input type="file" class="form-control" name="foto" accept="image/*">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ubicación</label>
+                            <input type="text" class="form-control" id="ubicacion" name="ubicacion" value="<?= htmlspecialchars($perro['ubicacion'] ?? '') ?>">
+                            <input type="hidden" id="latitud" name="latitud" value="<?= htmlspecialchars($perro['latitud'] ?? '') ?>">
+                            <input type="hidden" id="longitud" name="longitud" value="<?= htmlspecialchars($perro['longitud'] ?? '') ?>">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="disponible_apareamiento" name="disponible_apareamiento" <?= $perro['disponible_apareamiento'] ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="disponible_apareamiento">Disponible para apareamiento</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="pedigri" name="pedigri" <?= $perro['pedigri'] ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="pedigri">Tiene pedigrí</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="sociable_perros" name="sociable_perros" <?= $perro['sociable_perros'] ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="sociable_perros">Sociable con perros</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="sociable_personas" name="sociable_personas" <?= $perro['sociable_personas'] ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="sociable_personas">Sociable con personas</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="esterilizado" name="esterilizado" <?= $perro['esterilizado'] ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="esterilizado">Esterilizado</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                    </div>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" form="formEditarPerfil" class="btn btn-primary">Guardar Cambios</button>
             </div>
         </div>
     </div>
@@ -377,11 +423,14 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                 <h5 class="modal-title" id="subirFotosModalLabel">Subir Fotos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="../../controllers/MultimediaController.php" method="POST" enctype="multipart/form-data">
+            <form id="formSubirFotos" action="../../controllers/MultimediaController.php" method="POST" enctype="multipart/form-data">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="fotos" class="form-label">Seleccionar fotos</label>
                         <input type="file" class="form-control" id="fotos" name="fotos[]" multiple accept="image/*" required>
+                    </div>
+                    <div class="mb-3">
+                        <div id="previewFotos" class="preview-container d-flex flex-wrap"></div>
                     </div>
                     <div class="mb-3">
                         <label for="descripcion" class="form-label">Descripción (opcional)</label>
@@ -403,10 +452,15 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<?php if ($perro['latitud'] && $perro['longitud']): ?>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="../../public/js/razas.js"></script>
+<script src="../../public/js/perfil.js"></script>
+<?php if (isset($perro['latitud']) && isset($perro['longitud']) && $perro['latitud'] && $perro['longitud']): ?>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <?php endif; ?>
-<script src="../../public/js/perfil.js"></script>
+<?php if (isset($perro['latitud']) && isset($perro['longitud']) && $perro['latitud'] && $perro['longitud']): ?>
+    <script src="../../public/js/mapa.js"></script>
+<?php endif; ?>
 
 </body>
 </html>

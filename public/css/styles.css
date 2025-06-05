@@ -111,3 +111,93 @@ body {
 .form-container button:hover {
     background-color: #e72a4a;
 }
+
+/* Estilos para la tarjeta de raza */
+.raza-card {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 15px 0;
+    display: none;
+    border: 1px solid #ddd;
+}
+
+.raza-nombre {
+    color: #333;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.raza-descripcion {
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.caracteristicas-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.caracteristica-badge {
+    background-color: #ff3b5c;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    display: inline-block;
+}
+
+/* Estilos para Select2 */
+.select2-container--bootstrap-5 .select2-selection {
+    border-color: #ccc;
+    border-radius: 10px;
+}
+
+.select2-container--bootstrap-5 .select2-selection:focus {
+    border-color: #ff3b5c;
+    box-shadow: 0 0 0 0.25rem rgba(255, 59, 92, 0.25);
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background-color: #ff3b5c;
+    color: white;
+}
+
+.raza-option {
+    padding: 8px;
+}
+
+.raza-info .raza-nombre {
+    font-weight: bold;
+    color: #333;
+}
+
+.raza-info .raza-detalle {
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Estilos para mensajes de error */
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: -10px;
+    margin-bottom: 10px;
+}
+
+/* Estilos para el enlace de inicio de sesión */
+.form-container p {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.form-container a {
+    color: #ff3b5c;
+    text-decoration: none;
+}
+
+.form-container a:hover {
+    text-decoration: underline;
+}

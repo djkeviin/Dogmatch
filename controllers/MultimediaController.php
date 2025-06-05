@@ -12,27 +12,45 @@ class MultimediaController {
     }
 
     public function subirFotos() {
+        session_start();
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            header('Location: ../views/auth/perfil.php?error=método_no_permitido');
+            $_SESSION['error'] = "Método no permitido";
+            header('Location: ../views/auth/perfil.php');
             exit;
         }
 
         if (!isset($_FILES['fotos']) || !isset($_POST['perro_id'])) {
-            header('Location: ../views/auth/perfil.php?error=datos_incompletos');
+            $_SESSION['error'] = "Faltan datos necesarios para subir las fotos";
+            header('Location: ../views/auth/perfil.php');
             exit;
         }
 
         $perro_id = $_POST['perro_id'];
         $descripcion = $_POST['descripcion'] ?? '';
         $fotos = $_FILES['fotos'];
+        $fotosSubidas = 0;
 
         try {
+            // Verificar que el directorio de destino existe y tiene permisos
+            $directorio_destino = __DIR__ . '/../public/img/';
+            if (!is_dir($directorio_destino)) {
+                mkdir($directorio_destino, 0777, true);
+            }
+
             // Procesar cada foto
             for ($i = 0; $i < count($fotos['name']); $i++) {
                 if ($fotos['error'][$i] === UPLOAD_ERR_OK) {
+                    // Validar tipo de archivo
+                    $tipo = $fotos['type'][$i];
+                    if (!in_array($tipo, ['image/jpeg', 'image/png', 'image/gif'])) {
+                        continue; // Saltar archivos que no son imágenes
+                    }
+
                     $nombre_temporal = $fotos['tmp_name'][$i];
-                    $nombre_archivo = uniqid() . '_' . $fotos['name'][$i];
-                    $ruta_destino = __DIR__ . '/../public/img/' . $nombre_archivo;
+                    $extension = pathinfo($fotos['name'][$i], PATHINFO_EXTENSION);
+                    $nombre_archivo = uniqid() . '_' . time() . '.' . $extension;
+                    $ruta_destino = $directorio_destino . $nombre_archivo;
 
                     // Mover el archivo
                     if (move_uploaded_file($nombre_temporal, $ruta_destino)) {
@@ -43,15 +61,23 @@ class MultimediaController {
                             'url_archivo' => $nombre_archivo,
                             'descripcion' => $descripcion
                         ]);
+                        $fotosSubidas++;
                     }
                 }
             }
 
-            header('Location: ../views/auth/perfil.php?success=fotos_subidas');
+            if ($fotosSubidas > 0) {
+                $_SESSION['mensaje'] = "Se han subido $fotosSubidas fotos correctamente";
+            } else {
+                $_SESSION['error'] = "No se pudo subir ninguna foto";
+            }
+            
+            header('Location: ../views/auth/perfil.php');
             exit;
 
         } catch (Exception $e) {
-            header('Location: ../views/auth/perfil.php?error=' . urlencode($e->getMessage()));
+            $_SESSION['error'] = "Error al subir las fotos: " . $e->getMessage();
+            header('Location: ../views/auth/perfil.php');
             exit;
         }
     }
