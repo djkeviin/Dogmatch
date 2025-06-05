@@ -121,100 +121,37 @@ public function obtenerMultimediaPorPerroId($perro_id) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-public function actualizar($data) {
-    try {
-        $this->db->beginTransaction();
+public function actualizar($perro_id, $data) {
+    $sql = "UPDATE perros SET 
+            nombre = :nombre,
+            edad = :edad,
+            sexo = :sexo,
+            tamanio = :tamanio,
+            descripcion = :descripcion,
+            vacunado = :vacunado,
+            sociable_perros = :sociable_perros,
+            sociable_personas = :sociable_personas
+            WHERE id = :perro_id";
+            
+    $stmt = $this->db->prepare($sql);
+    
+    // Preparar los datos para la actualización
+    $params = [
+        ':nombre' => $data['nombre'],
+        ':edad' => $data['edad'],
+        ':sexo' => $data['sexo'],
+        ':tamanio' => $data['tamanio'] ?? 'mediano',
+        ':descripcion' => $data['descripcion'] ?? null,
+        ':vacunado' => isset($data['vacunado']) ? 1 : 0,
+        ':sociable_perros' => isset($data['sociable_perros']) ? 1 : 0,
+        ':sociable_personas' => isset($data['sociable_personas']) ? 1 : 0,
+        ':perro_id' => $perro_id
+    ];
 
-        // Validar datos requeridos
-        $campos_requeridos = ['nombre', 'edad', 'sexo', 'usuario_id'];
-        foreach ($campos_requeridos as $campo) {
-            if (!isset($data[$campo]) || $data[$campo] === '') {
-                throw new Exception("El campo " . ucfirst($campo) . " es requerido");
-            }
-        }
-
-        // Validar edad en meses
-        if (!is_numeric($data['edad']) || $data['edad'] < 0 || $data['edad'] > 300) {
-            throw new Exception("La edad debe ser un número válido entre 0 y 300 meses");
-        }
-
-        // Validar peso si está presente
-        if (isset($data['peso']) && !empty($data['peso'])) {
-            if (!is_numeric($data['peso']) || $data['peso'] < 0) {
-                throw new Exception("El peso debe ser un número válido");
-            }
-        }
-
-        // Primero obtener el ID del perro
-        $stmt = $this->db->prepare("SELECT id FROM perros WHERE usuario_id = ?");
-        $stmt->execute([$data['usuario_id']]);
-        $perro_id = $stmt->fetchColumn();
-
-        if (!$perro_id) {
-            throw new Exception("No se encontró el perro para actualizar");
-        }
-
-        $sql = "UPDATE perros SET 
-                nombre = :nombre,
-                edad = :edad,
-                sexo = :sexo,
-                peso = :peso,
-                descripcion = :descripcion,
-                temperamento = :temperamento,
-                sociable_perros = :sociable_perros,
-                sociable_personas = :sociable_personas,
-                estado_salud = :estado_salud,
-                vacunas = :vacunas,
-                esterilizado = :esterilizado,
-                disponible_apareamiento = :disponible_apareamiento,
-                condiciones_apareamiento = :condiciones_apareamiento,
-                pedigri = :pedigri
-                WHERE id = :perro_id";
-                
-        $stmt = $this->db->prepare($sql);
-        
-        // Preparar los datos para la actualización
-        $params = [
-            ':nombre' => $data['nombre'],
-            ':edad' => $data['edad'],
-            ':sexo' => $data['sexo'],
-            ':peso' => $data['peso'] ?? null,
-            ':descripcion' => $data['descripcion'] ?? null,
-            ':temperamento' => $data['temperamento'] ?? null,
-            ':sociable_perros' => isset($data['sociable_perros']) ? 1 : 0,
-            ':sociable_personas' => isset($data['sociable_personas']) ? 1 : 0,
-            ':estado_salud' => $data['estado_salud'] ?? null,
-            ':vacunas' => $data['vacunas'] ?? null,
-            ':esterilizado' => isset($data['esterilizado']) ? 1 : 0,
-            ':disponible_apareamiento' => isset($data['disponible_apareamiento']) ? 1 : 0,
-            ':condiciones_apareamiento' => $data['condiciones_apareamiento'] ?? null,
-            ':pedigri' => isset($data['pedigri']) ? 1 : 0,
-            ':perro_id' => $perro_id
-        ];
-
-        if (!$stmt->execute($params)) {
-            throw new Exception("Error al actualizar el perfil del perro");
-        }
-
-        // Manejar la actualización de razas si se proporcionó una nueva
-        if (!empty($data['raza'])) {
-            // Eliminar todas las razas existentes
-            $stmt = $this->db->prepare("DELETE FROM raza_perro WHERE perro_id = ?");
-            $stmt->execute([$perro_id]);
-
-            // Agregar la nueva raza
-            $stmt = $this->db->prepare("INSERT INTO raza_perro (perro_id, raza_id, es_principal, porcentaje) VALUES (?, ?, true, 100.00)");
-            $stmt->execute([$perro_id, $data['raza']]);
-        }
-
-        $this->db->commit();
-        return $perro_id;
-    } catch (Exception $e) {
-        if ($this->db->inTransaction()) {
-            $this->db->rollBack();
-        }
-        throw new Exception("Error al actualizar el perro: " . $e->getMessage());
+    if (!$stmt->execute($params)) {
+        throw new Exception("Error al actualizar el perfil del perro");
     }
+    return true;
 }
 
 public function buscarPerrosConFiltros($usuarioId, $filtros) {

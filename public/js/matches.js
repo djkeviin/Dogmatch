@@ -69,14 +69,14 @@ $(document).ready(function() {
     $('#filterForm').on('submit', function(e) {
         e.preventDefault();
         const filters = {
-            raza_id: $('.raza-select').val(),
-            edad: $('select[name="edad"]').val(),
-            distancia: $('input[name="distancia"]').val(),
-            tamanio: $('select[name="tamanio"]').val(),
-            grupo: $('select[name="grupo"]').val(),
-            esterilizado: $('#esterilizado').is(':checked'),
-            pedigri: $('#pedigri').is(':checked'),
-            sociable_perros: $('#sociable_perros').is(':checked')
+            raza: $('#raza').val(),
+            edad_min: $('#edad_min').val(),
+            edad_max: $('#edad_max').val(),
+            sexo: $('#sexo').val(),
+            tamanio: $('#tamanio').val(),
+            vacunado: $('#vacunado').is(':checked'),
+            sociable_perros: $('#sociable_perros').is(':checked'),
+            sociable_personas: $('#sociable_personas').is(':checked')
         };
         loadDogs(filters);
     });
@@ -108,12 +108,10 @@ function formatRazaSelection(raza) {
 
 // Template para generar una card
 function createDogCard(dog) {
-    const caracteristicas = [];
-    if (dog.tamanio) caracteristicas.push(`<span class="badge bg-secondary">${dog.tamanio}</span>`);
-    if (dog.grupo_raza) caracteristicas.push(`<span class="badge bg-primary">${dog.grupo_raza}</span>`);
-    if (dog.esterilizado) caracteristicas.push('<span class="badge bg-success">Esterilizado</span>');
-    if (dog.pedigri) caracteristicas.push('<span class="badge bg-warning">Pedigrí</span>');
+    let caracteristicas = [];
+    if (dog.vacunado) caracteristicas.push('<span class="badge bg-success">Vacunado</span>');
     if (dog.sociable_perros) caracteristicas.push('<span class="badge bg-info">Sociable con perros</span>');
+    if (dog.sociable_personas) caracteristicas.push('<span class="badge bg-warning">Sociable con personas</span>');
 
     return `
         <div class="card" data-dog-id="${dog.id}">

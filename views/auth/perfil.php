@@ -127,22 +127,10 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                     <p class="card-text"><?= htmlspecialchars($perro['descripcion'] ?? 'Sin descripción') ?></p>
                     
                     <h4 class="mt-4">Características</h4>
-                    <div class="mb-3">
-                        <?php if ($perro['sociable_perros']): ?>
-                            <span class="badge bg-success badge-custom">
-                                <i class="bi bi-check-circle"></i> Sociable con perros
-                            </span>
-                        <?php endif; ?>
-                        
-                        <?php if ($perro['sociable_personas']): ?>
-                            <span class="badge bg-success badge-custom">
-                                <i class="bi bi-check-circle"></i> Sociable con personas
-                            </span>
-                        <?php endif; ?>
-                        
-                        <?php if ($perro['esterilizado']): ?>
-                            <span class="badge bg-info badge-custom">
-                                <i class="bi bi-shield-check"></i> Esterilizado
+                    <div class="characteristics-badges">
+                        <?php if ($perro['vacunado']): ?>
+                            <span class="badge bg-success">
+                                <i class="bi bi-shield-check"></i> Vacunado
                             </span>
                         <?php endif; ?>
                         
@@ -387,6 +375,12 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="vacunado" name="vacunado" <?= $perro['vacunado'] ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="vacunado">Vacunado</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
                                 <input type="checkbox" class="form-check-input" id="sociable_perros" name="sociable_perros" <?= $perro['sociable_perros'] ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="sociable_perros">Sociable con perros</label>
                             </div>
@@ -395,12 +389,6 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input" id="sociable_personas" name="sociable_personas" <?= $perro['sociable_personas'] ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="sociable_personas">Sociable con personas</label>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="esterilizado" name="esterilizado" <?= $perro['esterilizado'] ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="esterilizado">Esterilizado</label>
                             </div>
                         </div>
                     </div>

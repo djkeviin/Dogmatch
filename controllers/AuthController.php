@@ -8,7 +8,7 @@ class AuthController {
     public function registrar($data, $files) {
         // Validación básica
         if (empty($data['nombre_dueño']) || empty($data['email']) || empty($data['password']) ||
-            empty($data['nombre_perro']) || empty($data['raza']) ||
+            empty($data['nombre_perro']) || empty($data['raza']) || empty($data['telefono']) ||
             empty($data['edad']) || empty($data['sexo']) || empty($files['foto'])) {
             
             header('Location: ../views/auth/registro.php?error=Faltan datos obligatorios');
@@ -37,6 +37,7 @@ class AuthController {
                 'nombre' => $data['nombre_dueño'],
                 'email' => $data['email'],
                 'password' => password_hash($data['password'], PASSWORD_DEFAULT),
+                'telefono' => $data['telefono'],
                 'latitud' => null,
                 'longitud' => null
             ]);
@@ -51,7 +52,6 @@ class AuthController {
                 'usuario_id' => $usuarioId,
                 'tamanio' => $data['tamanio'] ?? 'mediano',
                 'vacunado' => isset($data['vacunado']),
-                'esterilizado' => isset($data['esterilizado']),
                 'sociable_perros' => isset($data['sociable_perros']),
                 'sociable_personas' => isset($data['sociable_personas']),
                 'descripcion' => $data['descripcion'] ?? null
@@ -70,7 +70,7 @@ class AuthController {
 
             session_start();
             $_SESSION['mensaje'] = "Tu cuenta fue creada correctamente. Ahora puedes iniciar sesión.";
-            header('Location: ../views/auth/login.php');
+            header('Location: ../views/auth/registro.php');
             exit;
 
         } catch (Exception $e) {
@@ -78,7 +78,9 @@ class AuthController {
             if (file_exists($rutaDestino)) {
                 unlink($rutaDestino);
             }
-            header('Location: ../views/auth/registro.php?error=' . urlencode($e->getMessage()));
+            session_start();
+            $_SESSION['mensaje_error'] = $e->getMessage();
+            header('Location: ../views/auth/registro.php');
             exit;
         }
     }

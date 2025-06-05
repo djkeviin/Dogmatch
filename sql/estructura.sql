@@ -30,17 +30,16 @@ CREATE TABLE razas_perros (
 
 -- Crear tabla de perros
 CREATE TABLE perros (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL,
-    edad INT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL,
+    edad INT NOT NULL,
     sexo ENUM('Macho', 'Hembra') NOT NULL,
-    tamanio ENUM('pequeño', 'mediano', 'grande') NOT NULL,
-    foto VARCHAR(255),
+    tamanio ENUM('pequeño', 'mediano', 'grande') DEFAULT 'mediano',
+    foto VARCHAR(255) NOT NULL,
     usuario_id INT NOT NULL,
     vacunado BOOLEAN DEFAULT FALSE,
-    esterilizado BOOLEAN DEFAULT FALSE,
-    sociable_perros BOOLEAN DEFAULT TRUE,
-    sociable_personas BOOLEAN DEFAULT TRUE,
+    sociable_perros BOOLEAN DEFAULT FALSE,
+    sociable_personas BOOLEAN DEFAULT FALSE,
     descripcion TEXT,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE

@@ -87,42 +87,36 @@ class PerroController {
             exit;
         }
 
-        $usuario_id = $_SESSION['usuario']['id'];
-
-        // Preparar los datos para actualizar
-        $data = [
-            'nombre' => $_POST['nombre'],
-            'edad' => $_POST['edad'],
-            'sexo' => $_POST['sexo'],
-            'peso' => $_POST['peso'] ?: null,
-            'descripcion' => $_POST['descripcion'],
-            'temperamento' => $_POST['temperamento'],
-            'sociable_perros' => isset($_POST['sociable_perros']) ? 1 : 0,
-            'sociable_personas' => isset($_POST['sociable_personas']) ? 1 : 0,
-            'estado_salud' => $_POST['estado_salud'],
-            'vacunas' => $_POST['vacunas'],
-            'esterilizado' => isset($_POST['esterilizado']) ? 1 : 0,
-            'disponible_apareamiento' => isset($_POST['disponible_apareamiento']) ? 1 : 0,
-            'condiciones_apareamiento' => $_POST['condiciones_apareamiento'] ?? null,
-            'pedigri' => isset($_POST['pedigri']) ? 1 : 0,
-            'usuario_id' => $usuario_id
-        ];
-
         try {
-            // Si se proporcionó una nueva raza, incluirla en los datos
-            if (!empty($_POST['raza'])) {
-                $data['raza'] = $_POST['raza'];
+            $usuario_id = $_SESSION['usuario']['id'];
+            
+            // Obtener el ID del perro
+            $perro = $this->model->obtenerUnicoPorUsuarioId($usuario_id);
+            if (!$perro) {
+                throw new Exception("No se encontró el perro para actualizar");
             }
-            
-            // Actualizar toda la información del perro
-            $perro_id = $this->model->actualizar($data);
-            
+
+            // Preparar los datos para actualizar
+            $data = [
+                'nombre' => $_POST['nombre'],
+                'edad' => $_POST['edad'],
+                'sexo' => $_POST['sexo'],
+                'tamanio' => $_POST['tamanio'] ?? 'mediano',
+                'descripcion' => $_POST['descripcion'] ?? '',
+                'vacunado' => isset($_POST['vacunado']),
+                'sociable_perros' => isset($_POST['sociable_perros']),
+                'sociable_personas' => isset($_POST['sociable_personas'])
+            ];
+
+            // Actualizar el perfil
+            $this->model->actualizar($perro['id'], $data);
+
             $_SESSION['mensaje'] = "Perfil actualizado correctamente";
-            header('Location: ../views/auth/perfil.php?actualizado=1');
         } catch (Exception $e) {
-            $_SESSION['error'] = "Error al actualizar el perfil: " . $e->getMessage();
-            header('Location: ../views/auth/perfil.php?error=1');
+            $_SESSION['error'] = $e->getMessage();
         }
+
+        header('Location: ../views/auth/perfil.php');
         exit;
     }
 

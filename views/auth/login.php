@@ -6,8 +6,29 @@
   <title>Dog Match</title>
   <link rel="stylesheet" href="../../public/css/login.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
+
+<?php
+session_start();
+if (isset($_SESSION['mensaje'])) {
+    $mensaje = $_SESSION['mensaje'];
+    unset($_SESSION['mensaje']);
+    echo "
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            icon: 'success',
+            title: '¡Registro exitoso!',
+            text: " . json_encode($mensaje) . ",
+            confirmButtonText: 'Aceptar'
+        });
+    });
+    </script>
+    ";
+}
+?>
 
 <!--contenedor principal-->
 <div class="contenedor-principal">

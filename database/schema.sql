@@ -27,27 +27,17 @@ CREATE TABLE IF NOT EXISTS razas_perros (
 CREATE TABLE IF NOT EXISTS perros (
     id INT PRIMARY KEY AUTO_INCREMENT,
     nombre VARCHAR(100) NOT NULL,
-    edad INT,
+    edad INT NOT NULL,
     sexo ENUM('Macho', 'Hembra') NOT NULL,
-    peso DECIMAL(5,2),
-    descripcion TEXT,
-    foto VARCHAR(255),
+    tamanio ENUM('pequeño', 'mediano', 'grande') DEFAULT 'mediano',
+    foto VARCHAR(255) NOT NULL,
     usuario_id INT NOT NULL,
-    esterilizado BOOLEAN DEFAULT FALSE,
-    pedigri BOOLEAN DEFAULT FALSE,
-    sociable_perros BOOLEAN DEFAULT TRUE,
-    sociable_personas BOOLEAN DEFAULT TRUE,
-    estado_salud TEXT,
-    vacunas TEXT,
-    disponible_apareamiento BOOLEAN DEFAULT FALSE,
-    condiciones_apareamiento TEXT,
-    temperamento TEXT,
-    latitud DECIMAL(10,8),
-    longitud DECIMAL(11,8),
-    ubicacion VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
-    INDEX idx_perros_usuario (usuario_id)
+    vacunado BOOLEAN DEFAULT FALSE,
+    sociable_perros BOOLEAN DEFAULT FALSE,
+    sociable_personas BOOLEAN DEFAULT FALSE,
+    descripcion TEXT,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
 -- Tabla intermedia para relacionar perros con razas

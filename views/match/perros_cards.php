@@ -203,16 +203,20 @@
                 <div class="col-md-4">
                     <label class="form-label">Características</label>
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="esterilizado" id="esterilizado">
-                        <label class="form-check-label" for="esterilizado">Esterilizado</label>
-                    </div>
-                    <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="pedigri" id="pedigri">
                         <label class="form-check-label" for="pedigri">Con pedigrí</label>
                     </div>
                     <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="vacunado" id="vacunado">
+                        <label class="form-check-label" for="vacunado">Vacunado</label>
+                    </div>
+                    <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="sociable_perros" id="sociable_perros">
                         <label class="form-check-label" for="sociable_perros">Sociable con perros</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="sociable_personas" id="sociable_personas">
+                        <label class="form-check-label" for="sociable_personas">Sociable con personas</label>
                     </div>
                 </div>
                 <div class="col-12">
