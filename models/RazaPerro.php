@@ -36,6 +36,51 @@ class RazaPerro {
         return $stmt->execute([$perroId]);
     }
 
+    public function actualizarRazaPrincipal($perroId, $razaId) {
+        try {
+            $this->db->beginTransaction();
+
+            // Primero, establecer todas las razas como no principales
+            $stmt = $this->db->prepare("
+                UPDATE raza_perro 
+                SET es_principal = FALSE 
+                WHERE perro_id = ?
+            ");
+            $stmt->execute([$perroId]);
+
+            // Verificar si ya existe una relación con esta raza
+            $stmt = $this->db->prepare("
+                SELECT id FROM raza_perro 
+                WHERE perro_id = ? AND raza_id = ?
+            ");
+            $stmt->execute([$perroId, $razaId]);
+            $existente = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existente) {
+                // Actualizar la raza existente como principal
+                $stmt = $this->db->prepare("
+                    UPDATE raza_perro 
+                    SET es_principal = TRUE, porcentaje = 100 
+                    WHERE id = ?
+                ");
+                $stmt->execute([$existente['id']]);
+            } else {
+                // Crear nueva relación como principal
+                $stmt = $this->db->prepare("
+                    INSERT INTO raza_perro (perro_id, raza_id, es_principal, porcentaje) 
+                    VALUES (?, ?, TRUE, 100)
+                ");
+                $stmt->execute([$perroId, $razaId]);
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            throw new Exception("Error al actualizar la raza principal: " . $e->getMessage());
+        }
+    }
+
     public function buscarRazas($query) {
         try {
             $query = trim($query);
@@ -79,12 +124,18 @@ class RazaPerro {
 
     public function obtenerTodas() {
         try {
-            $sql = "SELECT * FROM razas_perros ORDER BY nombre ASC";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute();
+            $stmt = $this->db->query("
+                SELECT r.*, 
+                       COUNT(rp.id) as total_perros,
+                       GROUP_CONCAT(DISTINCT r.grupo_raza) as grupos
+                FROM razas_perros r
+                LEFT JOIN raza_perro rp ON r.id = rp.raza_id
+                GROUP BY r.id
+                ORDER BY r.nombre ASC
+            ");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            throw new Exception("Error al obtener razas: " . $e->getMessage());
+        } catch (Exception $e) {
+            throw new Exception("Error al obtener las razas: " . $e->getMessage());
         }
     }
 

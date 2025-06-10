@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/conexion.php';
 
 class Usuario {
     private $db;
+    const TIEMPO_ONLINE = 300; // 5 minutos en segundos
 
     public function __construct() {
         $this->db = Conexion::getConexion();
@@ -67,5 +68,60 @@ class Usuario {
         $sql = "UPDATE usuarios SET " . implode(", ", $campos) . " WHERE id = ?";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($valores);
+    }
+
+    /**
+     * Actualizar la última actividad del usuario
+     */
+    public function actualizarActividad($usuario_id) {
+        $sql = "UPDATE usuarios SET ultima_actividad = NOW() WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$usuario_id]);
+    }
+
+    /**
+     * Verificar si un usuario está en línea
+     */
+    public function estaEnLinea($usuario_id) {
+        $sql = "SELECT ultima_actividad FROM usuarios WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$usuario_id]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$resultado || !$resultado['ultima_actividad']) {
+            return false;
+        }
+
+        $ultima_actividad = strtotime($resultado['ultima_actividad']);
+        $ahora = time();
+        
+        return ($ahora - $ultima_actividad) <= self::TIEMPO_ONLINE;
+    }
+
+    /**
+     * Obtener el estado en línea de varios usuarios
+     */
+    public function obtenerEstadosEnLinea($usuario_ids) {
+        if (empty($usuario_ids)) {
+            return [];
+        }
+
+        $placeholders = str_repeat('?,', count($usuario_ids) - 1) . '?';
+        $sql = "SELECT id, ultima_actividad 
+                FROM usuarios 
+                WHERE id IN ($placeholders)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($usuario_ids);
+        $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $estados = [];
+        $ahora = time();
+        foreach ($resultados as $resultado) {
+            $ultima_actividad = strtotime($resultado['ultima_actividad']);
+            $estados[$resultado['id']] = ($ahora - $ultima_actividad) <= self::TIEMPO_ONLINE;
+        }
+
+        return $estados;
     }
 }

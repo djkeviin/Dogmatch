@@ -122,36 +122,70 @@ public function obtenerMultimediaPorPerroId($perro_id) {
 }
 
 public function actualizar($perro_id, $data) {
-    $sql = "UPDATE perros SET 
-            nombre = :nombre,
-            edad = :edad,
-            sexo = :sexo,
-            tamanio = :tamanio,
-            descripcion = :descripcion,
-            vacunado = :vacunado,
-            sociable_perros = :sociable_perros,
-            sociable_personas = :sociable_personas
-            WHERE id = :perro_id";
-            
-    $stmt = $this->db->prepare($sql);
-    
-    // Preparar los datos para la actualización
-    $params = [
-        ':nombre' => $data['nombre'],
-        ':edad' => $data['edad'],
-        ':sexo' => $data['sexo'],
-        ':tamanio' => $data['tamanio'] ?? 'mediano',
-        ':descripcion' => $data['descripcion'] ?? null,
-        ':vacunado' => isset($data['vacunado']) ? 1 : 0,
-        ':sociable_perros' => isset($data['sociable_perros']) ? 1 : 0,
-        ':sociable_personas' => isset($data['sociable_personas']) ? 1 : 0,
-        ':perro_id' => $perro_id
-    ];
+    try {
+        $this->db->beginTransaction();
 
-    if (!$stmt->execute($params)) {
-        throw new Exception("Error al actualizar el perfil del perro");
+        $sql = "UPDATE perros SET 
+                nombre = :nombre,
+                edad = :edad,
+                peso = :peso,
+                sexo = :sexo,
+                tamanio = :tamanio,
+                descripcion = :descripcion,
+                vacunado = :vacunado,
+                sociable_perros = :sociable_perros,
+                sociable_personas = :sociable_personas,
+                pedigri = :pedigri,
+                temperamento = :temperamento,
+                estado_salud = :estado_salud,
+                vacunas = :vacunas,
+                disponible_apareamiento = :disponible_apareamiento,
+                condiciones_apareamiento = :condiciones_apareamiento";
+
+        // Agregar foto solo si se proporciona
+        if (isset($data['foto'])) {
+            $sql .= ", foto = :foto";
+        }
+
+        $sql .= " WHERE id = :perro_id";
+                
+        $stmt = $this->db->prepare($sql);
+        
+        // Preparar los datos para la actualización
+        $params = [
+            ':nombre' => $data['nombre'],
+            ':edad' => $data['edad'],
+            ':peso' => $data['peso'],
+            ':sexo' => $data['sexo'],
+            ':tamanio' => $data['tamanio'] ?? 'mediano',
+            ':descripcion' => $data['descripcion'] ?? null,
+            ':vacunado' => $data['vacunado'] ? 1 : 0,
+            ':sociable_perros' => $data['sociable_perros'] ? 1 : 0,
+            ':sociable_personas' => $data['sociable_personas'] ? 1 : 0,
+            ':pedigri' => $data['pedigri'] ? 1 : 0,
+            ':temperamento' => $data['temperamento'] ?? null,
+            ':estado_salud' => $data['estado_salud'] ?? null,
+            ':vacunas' => $data['vacunas'] ?? null,
+            ':disponible_apareamiento' => $data['disponible_apareamiento'] ? 1 : 0,
+            ':condiciones_apareamiento' => $data['condiciones_apareamiento'] ?? null,
+            ':perro_id' => $perro_id
+        ];
+
+        // Agregar foto a los parámetros si existe
+        if (isset($data['foto'])) {
+            $params[':foto'] = $data['foto'];
+        }
+
+        if (!$stmt->execute($params)) {
+            throw new Exception("Error al actualizar el perfil del perro");
+        }
+
+        $this->db->commit();
+        return true;
+    } catch (Exception $e) {
+        $this->db->rollBack();
+        throw new Exception("Error al actualizar el perfil del perro: " . $e->getMessage());
     }
-    return true;
 }
 
 public function buscarPerrosConFiltros($usuarioId, $filtros) {
@@ -389,6 +423,84 @@ public function desactivarRazasPrincipales($perro_id) {
     $sql = "UPDATE raza_perro SET es_principal = false WHERE perro_id = ?";
     $stmt = $this->db->prepare($sql);
     return $stmt->execute([$perro_id]);
+}
+
+public function obtenerPerrosConValoraciones($filtros = []) {
+    $sql = "
+        SELECT 
+            p.*,
+            u.nombre as nombre_dueno,
+            GROUP_CONCAT(DISTINCT r.nombre) as razas,
+            COALESCE(AVG(v.puntuacion), 0) as valoracion_promedio,
+            COUNT(DISTINCT v.id) as total_valoraciones
+        FROM perros p
+        LEFT JOIN usuarios u ON p.usuario_id = u.id
+        LEFT JOIN raza_perro rp ON p.id = rp.perro_id
+        LEFT JOIN razas_perros r ON rp.raza_id = r.id
+        LEFT JOIN valoraciones v ON p.id = v.perro_id
+        WHERE 1=1";
+
+    $params = [];
+
+    // Aplicar filtros si existen
+    if (!empty($filtros['raza'])) {
+        $sql .= " AND r.nombre LIKE :raza";
+        $params[':raza'] = '%' . $filtros['raza'] . '%';
+    }
+
+    if (!empty($filtros['edad_min'])) {
+        $sql .= " AND p.edad >= :edad_min";
+        $params[':edad_min'] = $filtros['edad_min'];
+    }
+
+    if (!empty($filtros['edad_max'])) {
+        $sql .= " AND p.edad <= :edad_max";
+        $params[':edad_max'] = $filtros['edad_max'];
+    }
+
+    if (!empty($filtros['valoracion_min'])) {
+        $sql .= " HAVING valoracion_promedio >= :valoracion_min";
+        $params[':valoracion_min'] = $filtros['valoracion_min'];
+    }
+
+    $sql .= " GROUP BY p.id ORDER BY valoracion_promedio DESC";
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+public function obtenerPorId($perro_id) {
+    try {
+        // Obtener información básica del perro
+        $sql = "SELECT p.*, u.nombre as nombre_dueno, u.telefono
+                FROM perros p
+                JOIN usuarios u ON p.usuario_id = u.id
+                WHERE p.id = ?
+                LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$perro_id]);
+        $perro = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$perro) {
+            return null;
+        }
+
+        // Obtener las razas del perro
+        $sql = "SELECT r.*, rp.porcentaje, rp.es_principal, rp.raza_id
+                FROM raza_perro rp
+                JOIN razas_perros r ON rp.raza_id = r.id
+                WHERE rp.perro_id = :perro_id
+                ORDER BY rp.es_principal DESC, rp.porcentaje DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':perro_id' => $perro['id']]);
+        $perro['razas'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $perro;
+    } catch (PDOException $e) {
+        throw new Exception("Error al obtener el perfil del perro: " . $e->getMessage());
+    }
 }
 
 }

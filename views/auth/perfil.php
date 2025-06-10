@@ -1,22 +1,45 @@
 <?php
-require_once __DIR__ . '/../../models/Perro.php';
+require_once '../../config/conexion.php';
+require_once '../../models/Perro.php';
+require_once '../../models/RazaPerro.php';
+require_once '../../models/Valoracion.php';
 session_start();
 
+// Verificar si hay un usuario logueado
 if (!isset($_SESSION['usuario'])) {
     header('Location: login.php');
     exit;
 }
 
-$usuario_id = $_SESSION['usuario']['id'];
+// Obtener ID del perro
+$perro_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+// Instanciar modelos y obtener conexión
+$conn = Conexion::getConexion();
 $perroModel = new Perro();
-$perro = $perroModel->obtenerUnicoPorUsuarioId($usuario_id);
+$valoracionModel = new Valoracion();
+
+// Obtener el ID del perro de la URL o usar el del usuario logueado
+if (isset($_GET['id'])) {
+    $perro = $perroModel->obtenerPorId($perro_id);
+    $es_propietario = $perro && $perro['usuario_id'] == $_SESSION['usuario']['id'];
+} else {
+    $usuario_id = $_SESSION['usuario']['id'];
+    $perro = $perroModel->obtenerUnicoPorUsuarioId($usuario_id);
+    $es_propietario = true;
+}
 
 if (!$perro) {
-    header('Location: dashboard.php?error=no_perro');
+    header('Location: dashboard.php?error=perro_no_encontrado');
     exit;
 }
 
 $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
+
+// Obtener valoraciones
+$valoraciones = $valoracionModel->obtenerValoracionesPerro($perro_id);
+$promedio = $valoracionModel->obtenerPromedio($perro_id);
+$mi_valoracion = $valoracionModel->obtenerValoracionUsuario($perro_id, $_SESSION['usuario']['id']);
 ?>
 
 <!DOCTYPE html>
@@ -38,6 +61,16 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
 <body>
 
 <!-- Notificaciones -->
+<?php 
+// Código de depuración
+if (isset($perro['foto'])) {
+    echo '<!-- Debug info:';
+    echo 'Foto: ' . htmlspecialchars($perro['foto']) . '<br>';
+    echo 'Ruta completa: ' . __DIR__ . '/../../public/img/' . $perro['foto'] . '<br>';
+    echo 'Existe: ' . (file_exists(__DIR__ . '/../../public/img/' . $perro['foto']) ? 'Sí' : 'No') . '<br>';
+    echo '-->';
+}
+?>
 <?php if (isset($_SESSION['mensaje']) || isset($_SESSION['error'])): ?>
 <div class="notification">
     <?php if (isset($_SESSION['mensaje'])): ?>
@@ -74,6 +107,13 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                         <i class="bi bi-house-door"></i> Dashboard
                     </a>
                 </li>
+                <?php if ($es_propietario): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="$('#editarPerfilModal').modal('show')">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                </li>
+                <?php endif; ?>
                 <li class="nav-item">
                     <a class="nav-link" href="logout.php">
                         <i class="bi bi-box-arrow-right"></i> Salir
@@ -88,7 +128,15 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
 <div class="profile-header">
     <div class="container text-center">
         <div class="profile-image-container">
-            <img src="../../public/img/<?= htmlspecialchars($perro['foto']) ?>" alt="<?= htmlspecialchars($perro['nombre']) ?>" class="profile-image mb-3">
+            <?php if (!empty($perro['foto']) && file_exists(__DIR__ . '/../../public/img/' . $perro['foto'])): ?>
+                <img src="../../public/img/<?= rawurlencode($perro['foto']) ?>" 
+                     alt="<?= htmlspecialchars($perro['nombre']) ?>" 
+                     class="profile-image mb-3">
+            <?php else: ?>
+                <img src="../../public/img/default-dog.png" 
+                     alt="<?= htmlspecialchars($perro['nombre']) ?>" 
+                     class="profile-image mb-3">
+            <?php endif; ?>
         </div>
         <h1 class="text-white"><?= htmlspecialchars($perro['nombre']) ?></h1>
         <p class="lead">
@@ -106,9 +154,15 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                 • <?= htmlspecialchars($perro['peso']) ?> kg
             <?php endif; ?>
         </p>
+        <?php if ($es_propietario): ?>
         <button type="button" class="btn btn-light" onclick="$('#editarPerfilModal').modal('show')">
             <i class="bi bi-pencil"></i> Editar Perfil
         </button>
+        <?php else: ?>
+        <a href="../chat/mensajes.php?perro_id=<?= $perro['id'] ?>" class="btn btn-primary">
+            <i class="bi bi-chat"></i> Chatear
+        </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -137,6 +191,18 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                         <?php if ($perro['pedigri']): ?>
                             <span class="badge bg-warning badge-custom">
                                 <i class="bi bi-award"></i> Pedigrí
+                            </span>
+                        <?php endif; ?>
+
+                        <?php if ($perro['sociable_perros']): ?>
+                            <span class="badge bg-info badge-custom">
+                                <i class="bi bi-heart"></i> Sociable con perros
+                            </span>
+                        <?php endif; ?>
+
+                        <?php if ($perro['sociable_personas']): ?>
+                            <span class="badge bg-info badge-custom">
+                                <i class="bi bi-people"></i> Sociable con personas
                             </span>
                         <?php endif; ?>
                     </div>
@@ -203,6 +269,63 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                         <p class="mt-2">No hay fotos en la galería</p>
                         <p class="small">Haz clic en "Añadir fotos" para comenzar a subir imágenes</p>
                     </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Sistema de Valoración -->
+            <div class="valoracion-container mb-4">
+                <h4>Valoración</h4>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="valoracion-estrellas me-3">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <i class="bi bi-star<?= $i <= $promedio['promedio'] ? '-fill' : ($i - 0.5 <= $promedio['promedio'] ? '-half' : '') ?> text-warning"></i>
+                        <?php endfor; ?>
+                    </div>
+                    <div class="valoracion-texto">
+                        <span class="h5 mb-0"><?= number_format($promedio['promedio'], 1) ?></span>
+                        <small class="text-muted">(<?= $promedio['total'] ?> valoraciones)</small>
+                    </div>
+                </div>
+
+                <?php if (!$es_propietario): ?>
+                <!-- Formulario de valoración -->
+                <div class="mi-valoracion mb-3">
+                    <h5>Mi valoración</h5>
+                    <div class="estrellas-interactivas">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <i class="bi bi-star<?= $i <= ($mi_valoracion['puntuacion'] ?? 0) ? '-fill' : '' ?> text-warning estrella-valoracion"
+                               data-valor="<?= $i ?>"
+                               style="cursor: pointer; font-size: 1.5rem;"></i>
+                        <?php endfor; ?>
+                    </div>
+                    <small class="text-muted" id="mensajeValoracion"></small>
+                </div>
+                <?php endif; ?>
+
+                <!-- Lista de valoraciones recientes -->
+                <div class="valoraciones-recientes">
+                    <h5>Valoraciones recientes</h5>
+                    <?php if (empty($valoraciones)): ?>
+                        <p class="text-muted">Aún no hay valoraciones</p>
+                    <?php else: ?>
+                        <?php foreach ($valoraciones as $valoracion): ?>
+                            <div class="valoracion-item border-bottom py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong><?= htmlspecialchars($valoracion['nombre_usuario']) ?></strong>
+                                        <div>
+                                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                                                <i class="bi bi-star<?= $i <= $valoracion['puntuacion'] ? '-fill' : '' ?> text-warning"></i>
+                                            <?php endfor; ?>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        <?= date('d/m/Y', strtotime($valoracion['fecha_creacion'])) ?>
+                                    </small>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
             </div>
@@ -276,15 +399,25 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                         <div class="col-md-6">
                             <label class="form-label">Raza</label>
                             <select class="form-control raza-select" name="raza" required>
-                                <?php if (!empty($perro['razas'])): ?>
-                                    <?php foreach ($perro['razas'] as $raza): ?>
-                                        <?php if ($raza['es_principal']): ?>
-                                            <option value="<?= htmlspecialchars($raza['raza_id']) ?>" selected>
-                                                <?= htmlspecialchars($raza['nombre']) ?>
-                                            </option>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
+                                <?php 
+                                // Obtener todas las razas
+                                $razasModel = new RazaPerro();
+                                $todasLasRazas = $razasModel->obtenerTodas();
+                                foreach ($todasLasRazas as $raza): 
+                                    $selected = false;
+                                    if (!empty($perro['razas'])) {
+                                        foreach ($perro['razas'] as $razaPerro) {
+                                            if ($razaPerro['raza_id'] == $raza['id'] && $razaPerro['es_principal']) {
+                                                $selected = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                ?>
+                                    <option value="<?= htmlspecialchars($raza['id']) ?>" <?= $selected ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($raza['nombre']) ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
@@ -318,8 +451,26 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                             </select>
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label">Tamaño</label>
+                            <select class="form-select" name="tamanio" required>
+                                <option value="pequeño" <?= $perro['tamanio'] == 'pequeño' ? 'selected' : '' ?>>Pequeño</option>
+                                <option value="mediano" <?= $perro['tamanio'] == 'mediano' ? 'selected' : '' ?>>Mediano</option>
+                                <option value="grande" <?= $perro['tamanio'] == 'grande' ? 'selected' : '' ?>>Grande</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
                             <label class="form-label">Peso (kg)</label>
                             <input type="number" step="0.1" class="form-control" name="peso" value="<?= htmlspecialchars($perro['peso'] ?? '') ?>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Foto de perfil</label>
+                            <input type="file" class="form-control" name="foto" accept="image/*">
+                            <?php if (!empty($perro['foto'])): ?>
+                                <small class="form-text text-muted">Deja vacío para mantener la foto actual</small>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -345,10 +496,6 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                     </div>
 
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Foto de perfil</label>
-                            <input type="file" class="form-control" name="foto" accept="image/*">
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Ubicación</label>
                             <input type="text" class="form-control" id="ubicacion" name="ubicacion" value="<?= htmlspecialchars($perro['ubicacion'] ?? '') ?>">
@@ -391,6 +538,11 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
                                 <label class="form-check-label" for="sociable_personas">Sociable con personas</label>
                             </div>
                         </div>
+                    </div>
+
+                    <div id="seccionApareamiento" class="mb-3" style="display: <?= $perro['disponible_apareamiento'] ? 'block' : 'none' ?>;">
+                        <label class="form-label">Condiciones de Apareamiento</label>
+                        <textarea class="form-control" name="condiciones_apareamiento" rows="3"><?= htmlspecialchars($perro['condiciones_apareamiento'] ?? '') ?></textarea>
                     </div>
 
                     <div class="modal-footer">
@@ -449,6 +601,91 @@ $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
 <?php if (isset($perro['latitud']) && isset($perro['longitud']) && $perro['latitud'] && $perro['longitud']): ?>
     <script src="../../public/js/mapa.js"></script>
 <?php endif; ?>
+
+<script>
+// Mostrar/ocultar sección de condiciones de apareamiento
+document.getElementById('disponible_apareamiento').addEventListener('change', function() {
+    document.getElementById('seccionApareamiento').style.display = this.checked ? 'block' : 'none';
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Sistema de valoración interactivo
+    const estrellas = document.querySelectorAll('.estrella-valoracion');
+    const mensajeValoracion = document.getElementById('mensajeValoracion');
+
+    estrellas.forEach(estrella => {
+        // Hover effect
+        estrella.addEventListener('mouseenter', function() {
+            const valor = this.dataset.valor;
+            estrellas.forEach(e => {
+                if (e.dataset.valor <= valor) {
+                    e.classList.remove('bi-star');
+                    e.classList.add('bi-star-fill');
+                } else {
+                    e.classList.remove('bi-star-fill');
+                    e.classList.add('bi-star');
+                }
+            });
+        });
+
+        // Click event
+        estrella.addEventListener('click', function() {
+            const valor = this.dataset.valor;
+            valorarPerro(valor);
+        });
+    });
+
+    // Restaurar valoración original al quitar el mouse
+    const contenedorEstrellas = document.querySelector('.estrellas-interactivas');
+    if (contenedorEstrellas) {
+        contenedorEstrellas.addEventListener('mouseleave', restaurarValoracionOriginal);
+    }
+
+    function restaurarValoracionOriginal() {
+        const valoracionActual = <?= $mi_valoracion['puntuacion'] ?? 0 ?>;
+        estrellas.forEach(estrella => {
+            if (estrella.dataset.valor <= valoracionActual) {
+                estrella.classList.remove('bi-star');
+                estrella.classList.add('bi-star-fill');
+            } else {
+                estrella.classList.remove('bi-star-fill');
+                estrella.classList.add('bi-star');
+            }
+        });
+    }
+
+    function valorarPerro(puntuacion) {
+        fetch('../../api/valorar_perro.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                perro_id: <?= $perro_id ?>,
+                puntuacion: parseInt(puntuacion)
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mensajeValoracion.textContent = '¡Valoración guardada!';
+                mensajeValoracion.className = 'text-success';
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                throw new Error(data.error);
+            }
+        })
+        .catch(error => {
+            mensajeValoracion.textContent = 'Error al guardar la valoración';
+            mensajeValoracion.className = 'text-danger';
+        });
+    }
+});
+</script>
 
 </body>
 </html>
