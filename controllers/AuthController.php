@@ -9,7 +9,7 @@ class AuthController {
         // Validación básica
         if (empty($data['nombre_dueño']) || empty($data['email']) || empty($data['password']) ||
             empty($data['nombre_perro']) || empty($data['raza']) || empty($data['telefono']) ||
-            empty($data['edad']) || empty($data['sexo']) || empty($files['foto'])) {
+            empty($data['fecha_nacimiento']) || empty($data['sexo']) || empty($files['foto'])) {
             
             header('Location: ../views/auth/registro.php?error=Faltan datos obligatorios');
             exit;
@@ -25,6 +25,9 @@ class AuthController {
         // Subir imagen del perro
         $fotoNombre = time() . '_' . basename($files['foto']['name']);
         $rutaDestino = __DIR__ . '/../public/img/' . $fotoNombre;
+
+        // LOG: Registrar el valor recibido en raza
+        file_put_contents(__DIR__ . '/../public/debug.log', "[" . date('Y-m-d H:i:s') . "] Valor recibido en raza: " . print_r($data['raza'], true) . "\n", FILE_APPEND);
 
         if (!move_uploaded_file($files['foto']['tmp_name'], $rutaDestino)) {
             header('Location: ../views/auth/registro.php?error=Error al subir la imagen');
@@ -46,7 +49,7 @@ class AuthController {
             $perroModel = new Perro();
             $perroId = $perroModel->crear([
                 'nombre' => $data['nombre_perro'],
-                'edad' => $data['edad'],
+                'fecha_nacimiento' => $data['fecha_nacimiento'],
                 'sexo' => $data['sexo'],
                 'foto' => $fotoNombre,
                 'usuario_id' => $usuarioId,

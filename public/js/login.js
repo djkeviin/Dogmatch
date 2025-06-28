@@ -1,12 +1,17 @@
 // Función para mostrar/ocultar contraseña
-function verpassword() {
-    const passwordInput = document.querySelector('input[name="password"]');
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-    } else {
-        passwordInput.type = 'password';
-    }
-}
+// Mostrar/ocultar contraseña al pasar por el icono
+const passwordInput = document.getElementById("passwordInput");
+const togglePassword = document.getElementById("togglePassword");
+
+// Mostrar al pasar el mouse
+togglePassword.addEventListener("mouseover", () => {
+  passwordInput.type = "text";
+});
+
+// Ocultar al salir del icono
+togglePassword.addEventListener("mouseout", () => {
+  passwordInput.type = "password";
+});
 
 // Contador de intentos fallidos
 let intentosFallidos = 0;

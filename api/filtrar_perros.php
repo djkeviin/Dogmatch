@@ -1,16 +1,31 @@
 <?php
-require_once '../config/database.php';
+session_start();
+require_once __DIR__ . '/../config/conexion.php';
 header('Content-Type: application/json');
 
 try {
+    // Verificar si el usuario está autenticado
+    if (!isset($_SESSION['usuario'])) {
+        throw new Exception('Usuario no autenticado');
+    }
+
     // Obtener datos del POST
     $data = json_decode(file_get_contents('php://input'), true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('Error al decodificar JSON: ' . json_last_error_msg());
+    }
     
     // Inicializar variables de filtro
     $busqueda = $data['busqueda'] ?? '';
     $raza = $data['raza'] ?? '';
     $edad = $data['edad'] ?? '';
     $valoracion = $data['valoracion'] ?? '';
+
+    // Obtener conexión a la base de datos
+    $db = Conexion::getConexion();
+    if (!$db) {
+        throw new Exception('Error de conexión a la base de datos');
+    }
 
     // Construir la consulta base
     $sql = "SELECT DISTINCT p.*, 
@@ -19,8 +34,8 @@ try {
             COUNT(DISTINCT v.id) as total_valoraciones,
             u.nombre as nombre_dueno
             FROM perros p
-            LEFT JOIN perro_raza pr ON p.id = pr.perro_id
-            LEFT JOIN razas r ON pr.raza_id = r.id
+            LEFT JOIN raza_perro rp ON p.id = rp.perro_id
+            LEFT JOIN razas_perros r ON rp.raza_id = r.id
             LEFT JOIN valoraciones v ON p.id = v.perro_id
             LEFT JOIN usuarios u ON p.usuario_id = u.id";
 
@@ -58,20 +73,26 @@ try {
 
     if (!empty($edad)) {
         switch ($edad) {
-            case 'cachorro':
-                $where[] = "p.edad <= 12";
+            case '0-6':
+                $where[] = "p.edad <= 6";
                 break;
-            case 'joven':
-                $where[] = "p.edad > 12 AND p.edad <= 84";
+            case '7-12':
+                $where[] = "p.edad > 6 AND p.edad <= 12";
                 break;
-            case 'adulto':
-                $where[] = "p.edad > 84";
+            case '13+':
+                $where[] = "p.edad > 12";
                 break;
         }
     }
 
     if (!empty($valoracion)) {
-        $where[] = "COALESCE(AVG(v.puntuacion), 0) >= ?";
+        $where[] = "EXISTS (
+            SELECT 1 
+            FROM valoraciones v2 
+            WHERE v2.perro_id = p.id 
+            GROUP BY v2.perro_id 
+            HAVING AVG(v2.puntuacion) >= ?
+        )";
         $params[] = $valoracion;
     }
 
@@ -99,19 +120,24 @@ try {
     }
 
     // Preparar y ejecutar la consulta
-    $stmt = $conn->prepare($sql);
-    $stmt->execute($params);
-    $perros = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $perros = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error en la consulta SQL: " . $e->getMessage());
+        throw new Exception("Error al ejecutar la consulta: " . $e->getMessage());
+    }
 
     // Obtener las razas de cada perro
     foreach ($perros as &$perro) {
         // Obtener las razas específicas del perro
-        $stmt = $conn->prepare("
-            SELECT r.nombre, pr.porcentaje
-            FROM perro_raza pr
-            JOIN razas r ON pr.raza_id = r.id
-            WHERE pr.perro_id = ?
-            ORDER BY pr.es_principal DESC, pr.porcentaje DESC
+        $stmt = $db->prepare("
+            SELECT r.nombre, rp.porcentaje
+            FROM raza_perro rp
+            JOIN razas_perros r ON rp.raza_id = r.id
+            WHERE rp.perro_id = ?
+            ORDER BY rp.porcentaje DESC
         ");
         $stmt->execute([$perro['id']]);
         $razas = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -133,8 +159,15 @@ try {
     ]);
 
 } catch (Exception $e) {
+    error_log("Error en filtrar_perros.php: " . $e->getMessage());
+    http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => $e->getMessage(),
+        'debug_info' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]
     ]);
 } 

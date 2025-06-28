@@ -89,7 +89,9 @@ if (isset($_SESSION['mensaje_error'])) {
                 </div>
             </div>
 
-            <input type="number" name="edad" placeholder="Edad (en meses)" min="1" required>
+            <!-- Reemplazar campo de edad por fecha de nacimiento -->
+            <label for="fecha_nacimiento">Fecha de nacimiento</label>
+            <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" required>
 
             <select name="sexo" required>
                 <option value="">Selecciona sexo</option>
@@ -109,4 +111,4 @@ if (isset($_SESSION['mensaje_error'])) {
     <!-- Script personalizado -->
     <script src="../../public/js/registro.js"></script>
 </body>
-</html>
+</html> 

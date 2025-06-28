@@ -2,48 +2,37 @@
 session_start();
 require_once '../../config/conexion.php';
 require_once '../../models/Mensaje.php';
-require_once '../../models/Perro.php';
+require_once '../../models/Usuario.php';
 
 // Verificar si el usuario está autenticado
 if (!isset($_SESSION['usuario_id'])) {
-    header('Content-Type: application/json');
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['error' => 'No autorizado']);
     exit;
 }
 
 try {
-    $db = Conexion::getConexion();
     $usuario_id = $_SESSION['usuario_id'];
+    $mensajeModel = new Mensaje();
+    $usuarioModel = new Usuario();
 
-    // Obtener todas las conversaciones del usuario
-    $sql = "SELECT DISTINCT 
-                p.id,
-                p.nombre,
-                p.foto,
-                p.usuario_id,
-                (SELECT mensaje 
-                 FROM mensajes 
-                 WHERE perro_id = p.id
-                 ORDER BY fecha_envio DESC 
-                 LIMIT 1) as ultimo_mensaje
-            FROM perros p
-            INNER JOIN mensajes m ON m.perro_id = p.id
-            WHERE 
-                (m.emisor_id = ? OR m.perro_id IN (
-                    SELECT id FROM perros WHERE usuario_id = ?
-                ))
-            GROUP BY p.id
-            ORDER BY MAX(m.fecha_envio) DESC";
+    // 1. Obtener las conversaciones usando el método del modelo
+    $conversaciones = $mensajeModel->obtenerConversaciones($usuario_id);
 
-    $stmt = $db->prepare($sql);
-    $stmt->execute([$usuario_id, $usuario_id]);
-    $conversaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // 2. Enriquecer los datos de la conversación
+    foreach ($conversaciones as &$conv) {
+        // Verificar estado online del otro usuario
+        $conv['online'] = $usuarioModel->estaEnLinea($conv['otro_usuario_id']);
+        
+        // Añadir una bandera para saber si el último mensaje es una imagen
+        $conv['es_multimedia'] = !empty($conv['multimedia_id']);
+    }
 
-    // Devolver las conversaciones en formato JSON
-    header('Content-Type: application/json');
+    // 3. Devolver las conversaciones en formato JSON
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode($conversaciones);
 
 } catch (Exception $e) {
-    header('Content-Type: application/json');
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['error' => 'Error al obtener conversaciones: ' . $e->getMessage()]);
 } 

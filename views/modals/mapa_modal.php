@@ -28,8 +28,8 @@ if (session_status() === PHP_SESSION_NONE) {
                     </select>
                 </div>
 
-                <!-- Contenedor del mapa -->
-                <div id="mapaPerros" style="height: 400px;"></div>
+                <!-- Contenedor del mapa para ubicacion.js -->
+                <div id="mapa" style="height: 400px;"></div>
 
                 <!-- Leyenda del mapa -->
                 <div class="mt-3">
@@ -49,116 +49,6 @@ if (session_status() === PHP_SESSION_NONE) {
         </div>
     </div>
 </div>
-
-<!-- Script para el mapa -->
-<script>
-let mapa;
-let marcadores = [];
-const coordenadasIniciales = [19.4326, -99.1332]; // Coordenadas por defecto (CDMX)
-
-// Inicializar el mapa cuando se abre el modal
-document.getElementById('modalMapa').addEventListener('shown.bs.modal', function () {
-    if (!mapa) {
-        mapa = L.map('mapaPerros').setView(coordenadasIniciales, 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(mapa);
-    }
-    
-    // Obtener ubicación actual
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            posicion => {
-                const { latitude, longitude } = posicion.coords;
-                mapa.setView([latitude, longitude], 13);
-                actualizarMarcadores([latitude, longitude]);
-            },
-            error => {
-                console.error('Error al obtener ubicación:', error);
-                mapa.setView(coordenadasIniciales, 13);
-                actualizarMarcadores(coordenadasIniciales);
-            }
-        );
-    }
-});
-
-// Función para actualizar marcadores
-function actualizarMarcadores(ubicacionUsuario) {
-    // Limpiar marcadores existentes
-    marcadores.forEach(marcador => marcador.remove());
-    marcadores = [];
-
-    // Agregar marcador del usuario
-    const marcadorUsuario = L.marker(ubicacionUsuario, {
-        icon: L.divIcon({
-            className: 'marcador-usuario',
-            html: '<i class="bi bi-person-fill"></i>',
-            iconSize: [30, 30]
-        })
-    }).addTo(mapa);
-    marcadores.push(marcadorUsuario);
-
-    // Obtener perros cercanos
-    const radio = document.getElementById('filtroDistancia').value;
-    fetch('../../api/perros_cercanos.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            latitud: ubicacionUsuario[0],
-            longitud: ubicacionUsuario[1],
-            radio: radio
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            data.perros.forEach(perro => {
-                const marcadorPerro = L.marker([perro.latitud, perro.longitud], {
-                    icon: L.divIcon({
-                        className: `marcador-perro ${perro.match ? 'match' : ''}`,
-                        html: `<i class="bi bi-paw-fill"></i>`,
-                        iconSize: [30, 30]
-                    })
-                })
-                .bindPopup(`
-                    <div class="text-center">
-                        <img src="../../public/img/${perro.foto}" class="img-fluid rounded mb-2" style="max-height: 100px;">
-                        <h6>${perro.nombre}</h6>
-                        <p class="mb-1">${perro.raza} • ${perro.edad} meses</p>
-                        <a href="../auth/perfil.php?id=${perro.id}" class="btn btn-primary btn-sm">Ver perfil</a>
-                    </div>
-                `)
-                .addTo(mapa);
-                marcadores.push(marcadorPerro);
-            });
-        }
-    })
-    .catch(error => console.error('Error:', error));
-}
-
-// Event listeners
-document.getElementById('filtroDistancia').addEventListener('change', () => {
-    if (mapa) {
-        const centro = mapa.getCenter();
-        actualizarMarcadores([centro.lat, centro.lng]);
-    }
-});
-
-document.getElementById('actualizarUbicacion').addEventListener('click', () => {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            posicion => {
-                const { latitude, longitude } = posicion.coords;
-                mapa.setView([latitude, longitude], 13);
-                actualizarMarcadores([latitude, longitude]);
-            },
-            error => console.error('Error al actualizar ubicación:', error)
-        );
-    }
-});
-</script>
 
 <!-- Estilos para los marcadores del mapa -->
 <style>

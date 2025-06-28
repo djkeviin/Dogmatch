@@ -1,0 +1,97 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #ff6b3b 0%, #ff3b5c 100%);
+    min-height: 100vh;
+}
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 48px;
+    background: transparent;
+}
+.logo-img {
+    height: 60px;
+    width: auto;
+}
+.nav-buttons .btn {
+    background: transparent;
+    color: #fff;
+    border: 2px solid #fff;
+    padding: 10px 22px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+.nav-buttons .btn:hover {
+    background: #fff;
+    color: #ff3b5c;
+}
+.hero-content {
+    text-align: center;
+    margin-top: 80px;
+    color: #fff;
+}
+.hero-content h1 {
+    font-size: 3.2rem;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+.hero-content p {
+    font-size: 1.3rem;
+    margin-bottom: 30px;
+}
+.btn-primary {
+    background-color: #fff;
+    color: #ff3b5c;
+    padding: 16px 36px;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    transition: background 0.3s, color 0.3s;
+    border: none;
+    display: inline-block;
+}
+.btn-primary:hover {
+    background-color: #ff3b5c;
+    color: #fff;
+}
+.benefits {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin: 60px 0 40px 0;
+    flex-wrap: wrap;
+}
+.benefit-card {
+    background: rgba(255,255,255,0.15);
+    border-radius: 18px;
+    padding: 32px 24px;
+    color: #fff;
+    text-align: center;
+    width: 220px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    margin: 10px;
+}
+.benefit-card i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    display: block;
+}
+footer {
+    text-align: center;
+    color: #fff;
+    padding: 24px 0 10px 0;
+    font-size: 1rem;
+    opacity: 0.8;
+}
+@media (max-width: 700px) {
+    .navbar { flex-direction: column; padding: 18px 10px; }
+    .hero-content { margin-top: 40px; }
+    .hero-content h1 { font-size: 2rem; }
+    .benefits { flex-direction: column; gap: 18px; }
+    .benefit-card { width: 90%; margin: 0 auto; }
+} 

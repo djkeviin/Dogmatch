@@ -149,7 +149,7 @@ class PerroController {
             // Preparar los datos para actualizar
             $data = [
                 'nombre' => trim($_POST['nombre']),
-                'edad' => intval($_POST['edad']),
+                'fecha_nacimiento' => $_POST['fecha_nacimiento'],
                 'peso' => !empty($_POST['peso']) ? floatval($_POST['peso']) : null,
                 'sexo' => in_array($_POST['sexo'], ['Macho', 'Hembra']) ? $_POST['sexo'] : 'Macho',
                 'tamanio' => in_array($_POST['tamanio'], ['pequeño', 'mediano', 'grande']) ? $_POST['tamanio'] : 'mediano',
@@ -199,19 +199,15 @@ class PerroController {
         if (empty($datos['nombre'])) {
             throw new Exception("El nombre es obligatorio");
         }
-        
-        if (!isset($datos['edad']) || !is_numeric($datos['edad']) || $datos['edad'] < 0) {
-            throw new Exception("La edad debe ser un número válido");
+        if (empty($datos['fecha_nacimiento'])) {
+            throw new Exception("La fecha de nacimiento es obligatoria");
         }
-        
         if (!empty($datos['peso']) && (!is_numeric($datos['peso']) || $datos['peso'] < 0)) {
             throw new Exception("El peso debe ser un número válido");
         }
-        
         if (!in_array($datos['sexo'], ['Macho', 'Hembra'])) {
             throw new Exception("El sexo debe ser 'Macho' o 'Hembra'");
         }
-        
         if (!empty($datos['tamanio']) && !in_array($datos['tamanio'], ['pequeño', 'mediano', 'grande'])) {
             throw new Exception("El tamaño debe ser 'pequeño', 'mediano' o 'grande'");
         }

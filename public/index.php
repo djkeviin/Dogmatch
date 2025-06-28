@@ -13,13 +13,11 @@ $conn = Conexion::getConexion();
 require_once __DIR__ . '/../controllers/PerroController.php';
 require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/RazaController.php';
-require_once __DIR__ . '/../controllers/MatchesController.php';
 
 // Instanciar controladores
 $perroController = new PerroController();
 $authController = new AuthController();
 $razaController = new RazaController();
-$matchesController = new MatchesController();
 
 // Obtener la ruta de la URL
 $request_uri = $_SERVER['REQUEST_URI'];
@@ -61,21 +59,8 @@ if (strpos($route, '/api/') === 0) {
                 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     $query = $_GET['q'] ?? '';
                     error_log("Búsqueda de razas con query: " . $query);
-                    $result = $razaController->buscarRazas($query);
+                    $result = $razaController->buscar();
                     error_log("Resultado de búsqueda de razas: " . json_encode($result));
-                    echo json_encode(['success' => true, 'data' => $result]);
-                } else {
-                    throw new Exception('Método no permitido');
-                }
-                break;
-
-            case '/matches/crear':
-                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                    $data = json_decode(file_get_contents('php://input'), true);
-                    if (json_last_error() !== JSON_ERROR_NONE) {
-                        throw new Exception('Error al decodificar JSON: ' . json_last_error_msg());
-                    }
-                    $result = $matchesController->crear($data);
                     echo json_encode(['success' => true, 'data' => $result]);
                 } else {
                     throw new Exception('Método no permitido');
@@ -165,14 +150,6 @@ switch ($action) {
         }
         break;
 
-    case 'matches':
-        include '../views/match/perros_cards.php';
-        break;
-
-    case 'ver-matches':
-        include '../views/match/ver_match.php';
-        break;
-
     case 'dashboard':
         include '../views/auth/dashboard.php';
         break;
@@ -185,7 +162,7 @@ switch ($action) {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $query = $_GET['q'] ?? '';
             error_log("Búsqueda de razas con query: " . $query);
-            $result = $razaController->buscarRazas($query);
+            $result = $razaController->buscar();
             error_log("Resultado de búsqueda de razas: " . json_encode($result));
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'data' => $result]);

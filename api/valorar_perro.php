@@ -60,6 +60,23 @@ try {
         $stmt->execute([$usuario_id, $perro_id, $puntuacion]);
     }
 
+    // *** INICIO: LÓGICA DE NOTIFICACIÓN ***
+    require_once '../models/Notificacion.php';
+    require_once '../models/Perro.php';
+
+    $perroModel = new Perro();
+    $perro_valorado = $perroModel->obtenerPorId($perro_id);
+    $usuario_que_valora = $_SESSION['usuario'];
+
+    // Solo notificar si no es el propio dueño valorando
+    if ($perro_valorado && $perro_valorado['usuario_id'] != $usuario_id) {
+        $notificacion = new Notificacion();
+        $mensaje = "¡<b>" . htmlspecialchars($usuario_que_valora['nombre']) . "</b> ha valorado a <b>" . htmlspecialchars($perro_valorado['nombre']) . "</b> con " . $puntuacion . " estrellas!";
+        $url = "../auth/perfil.php?id=" . $perro_id;
+        $notificacion->crear($perro_valorado['usuario_id'], 'nueva_valoracion', $mensaje, $url);
+    }
+    // *** FIN: LÓGICA DE NOTIFICACIÓN ***
+
     // Obtener promedio actualizado
     $stmt = $conn->prepare("
         SELECT 

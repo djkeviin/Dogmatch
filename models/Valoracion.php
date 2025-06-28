@@ -103,4 +103,22 @@ class Valoracion {
             return $stmt->execute([$usuario_id, $perro_id, $puntuacion]);
         }
     }
+
+    public function guardarValoracion($perro_id, $usuario_id, $puntuacion, $comentario = null) {
+        // ... código existente ...
+        // Guardar o actualizar la valoración
+        // ...
+        // Notificación al dueño del perro
+        require_once __DIR__ . '/perro.php';
+        require_once __DIR__ . '/Notificacion.php';
+        $perroModel = new Perro();
+        $perro = $perroModel->obtenerPorId($perro_id);
+        if ($perro && $perro['usuario_id'] != $usuario_id) {
+            $noti = new Notificacion();
+            $mensaje = "¡Tu perro '{$perro['nombre']}' ha recibido una nueva valoración!";
+            $url = '../auth/perfil.php?id=' . $perro_id;
+            $noti->crear($perro['usuario_id'], 'valoracion', $mensaje, $url);
+        }
+        // ...
+    }
 } 

@@ -1,4 +1,15 @@
 <?php
+// Cabeceras para permitir CORS (Cross-Origin Resource Sharing)
+header("Access-Control-Allow-Origin: http://localhost:3000");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+
+// Si la solicitud es de tipo OPTIONS (preflight de CORS), se responde y termina.
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 require_once '../config/database.php';
 header('Content-Type: application/json');
 

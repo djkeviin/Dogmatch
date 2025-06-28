@@ -3,6 +3,7 @@ require_once '../../config/conexion.php';
 require_once '../../models/Perro.php';
 require_once '../../models/RazaPerro.php';
 require_once '../../models/Valoracion.php';
+require_once '../../models/MatchPerro.php';
 session_start();
 
 // Verificar si hay un usuario logueado
@@ -11,6 +12,10 @@ if (!isset($_SESSION['usuario'])) {
     exit;
 }
 
+// *** NUEVO: Obtener los perros del usuario actual para la selección de match ***
+$misPerrosModel = new Perro();
+$misPerros = $misPerrosModel->obtenerPorUsuario($_SESSION['usuario']['id']);
+
 // Obtener ID del perro
 $perro_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
@@ -18,6 +23,7 @@ $perro_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $conn = Conexion::getConexion();
 $perroModel = new Perro();
 $valoracionModel = new Valoracion();
+$matchModel = new MatchPerro();
 
 // Obtener el ID del perro de la URL o usar el del usuario logueado
 if (isset($_GET['id'])) {
@@ -32,6 +38,13 @@ if (isset($_GET['id'])) {
 if (!$perro) {
     header('Location: dashboard.php?error=perro_no_encontrado');
     exit;
+}
+
+// Nueva lógica para verificar el match
+$miPerroId = $_SESSION['perro_id'] ?? null;
+$existeMatch = false;
+if ($miPerroId && !$es_propietario) {
+    $existeMatch = $matchModel->esMatch($miPerroId, $perro['id']);
 }
 
 $multimedia = $perroModel->obtenerMultimediaPorPerroId($perro['id']);
@@ -54,6 +67,7 @@ $mi_valoracion = $valoracionModel->obtenerValoracionUsuario($perro_id, $_SESSION
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="../../public/css/perfil.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <?php if (isset($perro['latitud']) && isset($perro['longitud']) && $perro['latitud'] && $perro['longitud']): ?>
         <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <?php endif; ?>
@@ -104,7 +118,7 @@ if (isset($perro['foto'])) {
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
                     <a class="nav-link" href="../auth/dashboard.php">
-                        <i class="bi bi-house-door"></i> Dashboard
+                        <i class="bi bi-house-door"></i> Menu Principal
                     </a>
                 </li>
                 <?php if ($es_propietario): ?>
@@ -148,7 +162,23 @@ if (isset($perro['foto'])) {
                 echo implode(' • ', $razas_nombres);
                 ?> • 
             <?php endif; ?>
-            <?= htmlspecialchars($perro['edad']) ?> <?= $perro['edad'] == 1 ? 'mes' : 'meses' ?> • 
+            <?php
+            if (!empty($perro['fecha_nacimiento'])) {
+                $fecha_nacimiento = new DateTime($perro['fecha_nacimiento']);
+                $hoy = new DateTime();
+                $intervalo = $hoy->diff($fecha_nacimiento);
+                $meses = $intervalo->y * 12 + $intervalo->m;
+                if ($meses > 0) {
+                    echo $meses . ' mes' . ($meses > 1 ? 'es' : '');
+                } else {
+                    echo 'recién nacido';
+                }
+            } else if (isset($perro['edad'])) {
+                echo htmlspecialchars($perro['edad']) . ' mes' . ($perro['edad'] == 1 ? '' : 'es');
+            } else {
+                echo 'N/D';
+            }
+            ?> • 
             <?= htmlspecialchars($perro['sexo']) ?>
             <?php if ($perro['peso']): ?>
                 • <?= htmlspecialchars($perro['peso']) ?> kg
@@ -159,9 +189,20 @@ if (isset($perro['foto'])) {
             <i class="bi bi-pencil"></i> Editar Perfil
         </button>
         <?php else: ?>
-        <a href="../chat/mensajes.php?perro_id=<?= $perro['id'] ?>" class="btn btn-primary">
-            <i class="bi bi-chat"></i> Chatear
-        </a>
+            <?php if ($existeMatch): ?>
+                <a href="../chat/mensajes.php?perro_id=<?= $perro['id'] ?>" class="btn btn-primary">
+                    <i class="bi bi-chat"></i> Chatear
+                </a>
+            <?php else: ?>
+                <button class="btn btn-primary" onclick="mostrarAlertaNoMatch()">
+                    <i class="bi bi-chat"></i> Chatear
+                </button>
+            <?php endif; ?>
+        <?php endif; ?>
+        <?php if ($perro['usuario_id'] != $_SESSION['usuario_id']): ?>
+            <button class="btn btn-success" id="btnMatch" onclick="enviarSolicitudMatch(<?= $perro['id'] ?>)">
+                <i class="bi bi-heart"></i> Me interesa
+            </button>
         <?php endif; ?>
     </div>
 </div>
@@ -440,8 +481,8 @@ if (isset($perro['foto'])) {
 
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <label class="form-label">Edad (meses)</label>
-                            <input type="number" class="form-control" name="edad" value="<?= htmlspecialchars($perro['edad']) ?>" required>
+                            <label for="fecha_nacimiento">Fecha de nacimiento</label>
+                            <input type="date" class="form-control" name="fecha_nacimiento" id="fecha_nacimiento" value="<?= htmlspecialchars($perro['fecha_nacimiento'] ?? '') ?>" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Sexo</label>
@@ -595,6 +636,7 @@ if (isset($perro['foto'])) {
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="../../public/js/razas.js"></script>
 <script src="../../public/js/perfil.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <?php if (isset($perro['latitud']) && isset($perro['longitud']) && $perro['latitud'] && $perro['longitud']): ?>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <?php endif; ?>
@@ -603,6 +645,9 @@ if (isset($perro['foto'])) {
 <?php endif; ?>
 
 <script>
+// *** NUEVO: Pasar los perros del usuario a JavaScript ***
+const misPerros = <?= json_encode($misPerros); ?>;
+
 // Mostrar/ocultar sección de condiciones de apareamiento
 document.getElementById('disponible_apareamiento').addEventListener('change', function() {
     document.getElementById('seccionApareamiento').style.display = this.checked ? 'block' : 'none';
@@ -685,6 +730,94 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function mostrarAlertaNoMatch() {
+    Swal.fire({
+        icon: 'info',
+        title: 'Chat Bloqueado',
+        text: 'Debes tener un match confirmado para poder chatear con el dueño de este perro.',
+        confirmButtonText: 'Entendido'
+    });
+}
+
+// *** FUNCIÓN COMPLETAMENTE REHECHA ***
+function enviarSolicitudMatch(perroIdDestino) {
+    if (!misPerros || misPerros.length === 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'No tienes perros registrados',
+            text: 'Debes registrar al menos un perro en tu perfil para poder enviar solicitudes de match.',
+            confirmButtonText: 'Llevame a mi Perfil'
+        }).then(() => {
+            window.location.href = 'perfil.php';
+        });
+        return;
+    }
+
+    if (misPerros.length === 1) {
+        const miPerroId = misPerros[0].id;
+        confirmarYEnviar(perroIdDestino, miPerroId);
+    } else {
+        const inputOptions = {};
+        misPerros.forEach(perro => {
+            // Asumiendo que 'razas' es un string, tomamos la primera si hay varias
+            const raza = perro.razas ? perro.razas.split(',')[0].trim() : 'Raza no especificada';
+            inputOptions[perro.id] = `${perro.nombre} (${raza})`;
+        });
+
+        Swal.fire({
+            title: '¿Con qué perro quieres hacer match?',
+            input: 'select',
+            inputOptions: inputOptions,
+            inputPlaceholder: 'Selecciona tu perro',
+            showCancelButton: true,
+            confirmButtonText: 'Enviar Solicitud',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value) {
+                    return '¡Necesitas elegir un perro!';
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                const miPerroId = result.value;
+                confirmarYEnviar(perroIdDestino, miPerroId);
+            }
+        });
+    }
+}
+
+function confirmarYEnviar(perroIdDestino, miPerroId) {
+     Swal.fire({
+        title: '¿Confirmar solicitud?',
+        text: "Se enviará una solicitud de match. ¿Deseas continuar?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, enviar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('../../controllers/match/solicitar.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    perro_id: perroIdDestino,
+                    interesado_id: miPerroId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('¡Solicitud Enviada!', data.message, 'success');
+                } else {
+                    Swal.fire('Error', data.error, 'error');
+                }
+            });
+        }
+    });
+}
 </script>
 
 </body>

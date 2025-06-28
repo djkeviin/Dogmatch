@@ -1,0 +1,22 @@
+-- Insertar razas de perros comunes
+INSERT INTO razas_perros (nombre) VALUES 
+('Labrador Retriever'),
+('Golden Retriever'),
+('Pastor Alemán'),
+('Bulldog'),
+('Beagle'),
+('Poodle'),
+('Rottweiler'),
+('Yorkshire Terrier'),
+('Boxer'),
+('Dachshund'),
+('Chihuahua'),
+('Shih Tzu'),
+('Pug'),
+('Husky Siberiano'),
+('Doberman'),
+('Gran Danés'),
+('San Bernardo'),
+('Border Collie'),
+('Cocker Spaniel'),
+('Pomerania'); 

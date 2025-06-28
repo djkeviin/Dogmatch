@@ -1,435 +1,347 @@
-// Variables globales
-let perroActualId = null;
-let ultimoMensajeId = 0;
-let actualizacionInterval = null;
-let ultimaActualizacion = 0;
-let intervaloMensajes = null;
-let intervaloEstados = null;
-let mensajesIds = new Set(); // Para rastrear mensajes ya mostrados
-let cargandoMensajes = false;
+/**
+ * Sistema de Chat para DogMatch
+ * Refactorizado para mayor eficiencia y claridad.
+ */
 
-// Inicialización cuando el documento está listo
-document.addEventListener('DOMContentLoaded', function() {
-    // Obtener perro_id de la URL si existe
-    const urlParams = new URLSearchParams(window.location.search);
-    perroActualId = urlParams.get('perro_id');
+// Estado global del chat
+const chatState = {
+    usuarioId: null,
+    conversacionActivaId: null,
+    ultimoTimestamp: 0,
+    intervaloActualizacion: null,
+    cargandoMensajes: false,
+    mensajesMostrados: new Set(),
+    escribiendoTimeout: null,
+    ultimaActividadEscritura: 0,
+    enviandoMensaje: false
+};
 
-    console.log('perroActualId al iniciar:', perroActualId);
+document.addEventListener('DOMContentLoaded', () => {
+    const chatContainer = document.querySelector('.chat-container');
+    if (!chatContainer) return;
 
-    // Inicializar eventos
-    inicializarEventos();
+    chatState.usuarioId = parseInt(chatContainer.dataset.usuarioId, 10);
+    const perroIdInicial = chatContainer.dataset.conversacionActivaId;
     
-    // Cargar conversaciones
     cargarConversaciones();
-    
-    // Si hay un perro seleccionado, cargar sus mensajes
-    if (perroActualId) {
-        cargarMensajes();
-        // Actualizar mensajes cada 5 segundos
-        actualizacionInterval = setInterval(cargarMensajes, 5000);
+    if (perroIdInicial) {
+        seleccionarConversacion(perroIdInicial, true);
     }
-
-    // Actualizar estado cada minuto
-    actualizarMiEstado();
-    setInterval(actualizarMiEstado, 60000);
-
-    // Actualizar estados en línea cada 10 segundos
-    actualizarEstadosEnLinea();
-    intervaloEstados = setInterval(actualizarEstadosEnLinea, 10000);
-
-    // Cargar mensajes nuevos cada 3 segundos
-    intervaloMensajes = setInterval(cargarMensajesNuevos, 3000);
+    
+    iniciarMotorDeActualizacion();
+    configurarEventosUI();
+    configurarBusqueda();
 });
 
-// Inicializar eventos
-function inicializarEventos() {
-    console.log('Inicializando eventos...');
-    
-    // Formulario de chat
+function iniciarMotorDeActualizacion() {
+    if (chatState.intervaloActualizacion) {
+        clearInterval(chatState.intervaloActualizacion);
+    }
+    chatState.intervaloActualizacion = setInterval(actualizarChat, 2000);
+}
+
+function configurarEventosUI() {
     const chatForm = document.getElementById('chatForm');
-    const mensajeInput = document.getElementById('mensajeInput');
-    
-    if (chatForm && mensajeInput) {
-        console.log('Formulario de chat y input encontrados');
-        
-        chatForm.addEventListener('submit', async function(e) {
+    if (chatForm) {
+        chatForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (chatState.enviandoMensaje) return;
             
+            const mensajeInput = document.getElementById('mensajeInput');
             const mensaje = mensajeInput.value.trim();
-            console.log('Intento de envío de mensaje:', mensaje);
-            
-            if (!mensaje) {
-                console.log('Mensaje vacío, no se envía');
-                return;
-            }
-            
-            const enviado = await enviarMensaje(mensaje);
-            if (enviado) {
-                console.log('Mensaje enviado correctamente, limpiando input');
+            if (mensaje && chatState.conversacionActivaId) {
                 mensajeInput.value = '';
-                // Esperar un momento antes de cargar los mensajes
-                setTimeout(cargarMensajes, 500);
+                await enviarMensaje(mensaje);
             }
-        });
-    } else {
-        console.error('No se encontró el formulario de chat o el input', {
-            formFound: !!chatForm,
-            inputFound: !!mensajeInput
         });
     }
 
-    // Búsqueda de conversaciones
-    const searchInput = document.querySelector('.search-container input');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            filtrarConversaciones(this.value);
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
+    }
+
+    const mensajeInput = document.getElementById('mensajeInput');
+    if (mensajeInput) {
+        mensajeInput.addEventListener('input', function() {
+            if (chatState.conversacionActivaId) {
+                enviarEstadoEscritura(true);
+                clearTimeout(chatState.escribiendoTimeout);
+                chatState.escribiendoTimeout = setTimeout(() => enviarEstadoEscritura(false), 3000);
+            }
         });
     }
 }
 
-// Función para cargar conversaciones
+/**
+ * MANEJO DE IMÁGENES
+ */
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file || !chatState.conversacionActivaId) return;
+
+    if (!file.type.startsWith('image/')) {
+        Swal.fire('Error', 'Solo puedes enviar archivos de imagen.', 'error');
+        return;
+    }
+    
+    // Ya no se renderiza una vista previa. Solo se envía la imagen.
+    // La actualización automática se encargará de mostrarla.
+    enviarImagen(file);
+    
+    event.target.value = null; // Reset input
+}
+
+async function enviarImagen(file) {
+    const formData = new FormData();
+    formData.append('imagen', file);
+    formData.append('perro_destinatario_id', chatState.conversacionActivaId);
+    // Ya no necesitamos un ID temporal en el frontend.
+    // El backend puede seguir usándolo si quiere, pero no es crucial para la UI.
+
+    try {
+        const response = await fetch('../../controllers/chat/enviar_imagen.php', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (!data.success) {
+            Swal.fire('Error', data.error || 'No se pudo enviar la imagen.', 'error');
+        }
+        // En caso de éxito, no hacemos nada. La actualización automática la mostrará.
+    } catch (error) {
+        Swal.fire('Error de Conexión', 'No se pudo subir la imagen.', 'error');
+    }
+}
+
+/**
+ * LÓGICA DE MENSAJERÍA Y RENDERIZADO
+ */
+async function actualizarChat() {
+    if (!chatState.usuarioId) return;
+
+    try {
+        const url = `../../controllers/chat/actualizar_chat.php?conversacion_activa_id=${chatState.conversacionActivaId || ''}&ultimo_timestamp=${chatState.ultimoTimestamp}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.conversaciones) actualizarListaConversaciones(data.conversaciones);
+            if (data.mensajes) renderizarMensajes(data.mensajes);
+            chatState.ultimoTimestamp = data.timestamp;
+        }
+    } catch (error) {
+        // console.error('Fallo la actualización del chat:', error);
+    }
+}
+
+function renderizarMensajes(mensajes) {
+    const chatContainer = document.getElementById('chatMessages');
+    if (!chatContainer) return;
+    
+    const debeScroll = (chatContainer.scrollTop + chatContainer.clientHeight) >= chatContainer.scrollHeight - 100;
+
+    mensajes.forEach(msg => {
+        // Lógica de reemplazo de mensajes temporales eliminada.
+        if (chatState.mensajesMostrados.has(msg.id)) return;
+
+        const msgElement = crearElementoMensaje(msg);
+        chatContainer.appendChild(msgElement);
+        chatState.mensajesMostrados.add(msg.id);
+    });
+
+    if (debeScroll) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+}
+
+
+function crearElementoMensaje(msg) {
+    const msgElement = document.createElement('div');
+    msgElement.className = `mensaje ${msg.es_emisor ? 'mensaje-enviado' : 'mensaje-recibido'}`;
+    if(msg.id) msgElement.dataset.mensajeId = msg.id;
+    
+    const fecha = new Date(msg.fecha_envio);
+    const horaFormateada = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    let estadoIcono = '';
+    if (msg.es_emisor) {
+        if (msg.leido) {
+            estadoIcono = '<i class="bi bi-check2-all text-primary"></i>';
+        } else {
+            estadoIcono = '<i class="bi bi-check2-all text-muted"></i>';
+        }
+    }
+
+    let imagePath;
+    if (msg.multimedia_url) {
+        if (msg.multimedia_url.startsWith('blob:')) {
+            // Es una URL de vista previa local, se usa directamente.
+            imagePath = msg.multimedia_url;
+        } else if (msg.multimedia_url.startsWith('chatimg_')) {
+            // Es una imagen nueva de la carpeta de chat.
+            imagePath = `../../public/img/chat/${msg.multimedia_url}`;
+        } else {
+            // Es una imagen antigua de la carpeta principal.
+            imagePath = `../../public/img/${msg.multimedia_url}`;
+        }
+    }
+
+    const contenido = msg.multimedia_url 
+        ? `<img src="${imagePath}" alt="Imagen" class="chat-image" onclick="verImagenCompleta('${imagePath}')">`
+        : `<p class="mensaje-texto">${htmlspecialchars(msg.mensaje)}</p>`;
+
+    msgElement.innerHTML = `
+        <div class="mensaje-contenido ${msg.multimedia_url ? 'mensaje-imagen' : ''}">
+            ${contenido}
+            <div class="mensaje-footer">
+                <span class="mensaje-hora">${horaFormateada}</span>
+                ${estadoIcono}
+            </div>
+        </div>`;
+    return msgElement;
+}
+
+async function enviarMensaje(mensaje) {
+    chatState.enviandoMensaje = true;
+    try {
+        await fetch('../../controllers/chat/enviar_mensaje.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                perro_destinatario_id: chatState.conversacionActivaId,
+                mensaje: mensaje
+            })
+        });
+    } catch (error) {
+        Swal.fire('Error', 'No se pudo enviar el mensaje.', 'error');
+    } finally {
+        chatState.enviandoMensaje = false;
+    }
+}
+
+/**
+ * FUNCIONES AUXILIARES Y DE UI
+ */
 async function cargarConversaciones() {
     try {
         const response = await fetch('../../controllers/chat/obtener_conversaciones.php');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error);
-        }
-
-        const listaConversaciones = document.querySelector('.conversations-list');
-        listaConversaciones.innerHTML = '';
-        
-        if (data.length === 0) {
-            listaConversaciones.innerHTML = `
-                <div class="text-center p-3 text-muted">
-                    <p>No hay conversaciones aún</p>
-                </div>
-            `;
-            return;
-        }
-        
-        data.forEach(conv => {
-            const conversacionHtml = `
-                <div class="conversation-item" data-conversacion-id="${conv.id}" data-usuario-id="${conv.usuario_id}">
-                    <img src="../../public/img/${conv.foto || 'default-dog.png'}" alt="${conv.nombre}">
-                    <div class="conversation-info">
-                        <h6>${conv.nombre}</h6>
-                        <p class="ultimo-mensaje">${conv.ultimo_mensaje || 'No hay mensajes'}</p>
-                    </div>
-                    <div class="estado-usuario">Verificando...</div>
-                </div>
-            `;
-            listaConversaciones.innerHTML += conversacionHtml;
-        });
-        
-        // Actualizar estados después de cargar conversaciones
-        actualizarEstadosEnLinea();
-        
-        // Agregar eventos click a las conversaciones
-        document.querySelectorAll('.conversation-item').forEach(item => {
-            item.addEventListener('click', () => {
-                window.location.href = `mensajes.php?perro_id=${item.dataset.conversacionId}`;
-            });
-        });
+        const conversaciones = await response.json();
+        actualizarListaConversaciones(conversaciones);
     } catch (error) {
-        console.error('Error al cargar conversaciones:', error);
-        const listaConversaciones = document.querySelector('.conversations-list');
-        listaConversaciones.innerHTML = `
-            <div class="alert alert-danger m-3" role="alert">
-                Error al cargar las conversaciones. Por favor, recarga la página.
-            </div>
-        `;
+        // console.error('Error cargando conversaciones:', error);
     }
 }
 
-// Función para filtrar conversaciones
-function filtrarConversaciones(busqueda) {
-    const items = document.querySelectorAll('.conversation-item');
-    busqueda = busqueda.toLowerCase();
+function actualizarListaConversaciones(conversaciones) {
+    const listaContainer = document.querySelector('.conversations-list');
+    if (!listaContainer) return;
 
-    items.forEach(item => {
-        const nombre = item.querySelector('h6').textContent.toLowerCase();
-        if (nombre.includes(busqueda)) {
-            item.style.display = '';
-        } else {
-            item.style.display = 'none';
+    conversaciones.forEach(conv => {
+        let convElement = document.querySelector(`.conversation-item[data-perro-id='${conv.perro_id}']`);
+        const estadoOnline = conv.online ? 'online' : 'offline';
+        const ultimoMensaje = conv.es_multimedia ? '<i class="bi bi-camera-fill"></i> Imagen' : htmlspecialchars(conv.ultimo_mensaje);
+
+        if (!convElement) {
+            convElement = document.createElement('div');
+            convElement.className = 'conversation-item';
+            convElement.dataset.perroId = conv.perro_id;
+            convElement.addEventListener('click', () => seleccionarConversacion(conv.perro_id));
+        }
+        
+        convElement.innerHTML = `
+            <div class="profile-pic-container ${estadoOnline}">
+                <img src="../../public/img/${conv.foto || 'default-dog.png'}" alt="${conv.nombre}">
+            </div>
+            <div class="conversation-info">
+                <h6>${conv.nombre}</h6>
+                <p class="ultimo-mensaje">${ultimoMensaje || ''}</p>
+            </div>
+            ${conv.no_leidos > 0 ? `<span class="badge bg-danger rounded-pill unread-count">${conv.no_leidos}</span>` : ''}`;
+        
+        if (listaContainer.firstChild !== convElement) {
+            listaContainer.prepend(convElement);
         }
     });
 }
 
-// Función para seleccionar una conversación
-function seleccionarConversacion(perroId) {
-    // Actualizar URL sin recargar la página
-    const newUrl = `${window.location.pathname}?perro_id=${perroId}`;
-    window.history.pushState({ perroId }, '', newUrl);
+function seleccionarConversacion(perroId, esCargaInicial = false) {
+    if (!perroId) return;
     
-    // Recargar la página para mostrar la nueva conversación
-    window.location.reload();
+    chatState.conversacionActivaId = perroId;
+
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.perroId == perroId);
+    });
+    
+    const chatContainer = document.getElementById('chatMessages');
+    chatContainer.innerHTML = '<div class="text-center p-3 text-muted">Cargando...</div>';
+    chatState.mensajesMostrados.clear();
+    
+    actualizarInfoChat(perroId);
+    cargarMensajesHistoricos(perroId);
+
+    if (!esCargaInicial) {
+        const url = new URL(window.location);
+        url.searchParams.set('perro_id', perroId);
+        window.history.pushState({ perroId }, '', url);
+    }
 }
 
-// Función para cargar mensajes
-async function cargarMensajes() {
-    if (!perroActualId || cargandoMensajes) return;
-    
-    cargandoMensajes = true;
-    
+async function cargarMensajesHistoricos(perroId) {
     try {
-        const response = await fetch(`../../controllers/chat/obtener_mensajes.php?perro_id=${perroActualId}&ultima_actualizacion=${ultimaActualizacion}`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const response = await fetch(`../../controllers/chat/obtener_mensajes.php?perro_id=${perroId}`);
         const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error);
-        }
-
-        if (data.mensajes && data.mensajes.length > 0) {
-            const chatContainer = document.querySelector('.chat-messages');
-            let seAgregaron = false;
-            
-            data.mensajes.forEach(mensaje => {
-                // Verificar si el mensaje ya existe usando el Set
-                if (!mensajesIds.has(mensaje.id)) {
-                    mensajesIds.add(mensaje.id);
-                    
-                    // Preparar el mensaje para mostrarlo
-                    const mensajeProcesado = {
-                        id: mensaje.id,
-                        mensaje: mensaje.mensaje,
-                        fecha_envio: mensaje.fecha_envio,
-                        es_emisor: mensaje.emisor_id == userId,
-                        emisor_nombre: mensaje.emisor_nombre
-                    };
-
-                    const mensajeHtml = crearElementoMensaje(mensajeProcesado);
-                    chatContainer.appendChild(mensajeHtml);
-                    seAgregaron = true;
-                }
-            });
-            
-            // Solo hacer scroll si se agregaron nuevos mensajes
-            if (seAgregaron) {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-            
-            ultimaActualizacion = data.ultima_actualizacion;
-        }
-    } catch (error) {
-        console.error('Error al cargar mensajes:', error);
-    } finally {
-        cargandoMensajes = false;
-    }
-}
-
-// Función para crear elemento de mensaje
-function crearElementoMensaje(mensaje) {
-    const div = document.createElement('div');
-    div.className = `mensaje ${mensaje.es_emisor ? 'mensaje-enviado' : 'mensaje-recibido'}`;
-    div.setAttribute('data-mensaje-id', mensaje.id);
-
-    // Formatear la fecha
-    let fechaFormateada;
-    if (mensaje.fecha_envio) {
-        try {
-            const fecha = new Date(mensaje.fecha_envio);
-            if (!isNaN(fecha)) {
-                fechaFormateada = fecha.toLocaleTimeString('es-ES', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } else {
-                fechaFormateada = 'Ahora';
-            }
-        } catch (error) {
-            console.error('Error al formatear la fecha:', error);
-            fechaFormateada = 'Ahora';
-        }
-    } else {
-        fechaFormateada = 'Ahora';
-    }
-
-    // Crear el contenido del mensaje
-    div.innerHTML = `
-        <div class="mensaje-contenido">
-            ${!mensaje.es_emisor ? `<small class="mensaje-emisor">${mensaje.emisor_nombre || 'Usuario'}</small>` : ''}
-            <p>${mensaje.mensaje}</p>
-            <small class="mensaje-hora">${fechaFormateada}</small>
-        </div>
-    `;
-
-    return div;
-}
-
-// Función para enviar mensaje
-async function enviarMensaje(mensaje) {
-    console.log('Función enviarMensaje llamada con:', { mensaje, perroActualId });
-
-    // Validación de datos
-    if (!perroActualId) {
-        console.error('No hay perro seleccionado para enviar el mensaje');
-        mostrarAlerta('Error: No hay perro seleccionado', 'error');
-        return false;
-    }
-
-    if (!mensaje || typeof mensaje !== 'string' || mensaje.trim() === '') {
-        console.error('Mensaje inválido:', mensaje);
-        mostrarAlerta('Error: El mensaje no puede estar vacío', 'error');
-        return false;
-    }
-
-    try {
-        const datosEnvio = {
-            perro_id: perroActualId,
-            mensaje: mensaje.trim()
-        };
         
-        console.log('Enviando datos al servidor:', datosEnvio);
-
-        const response = await fetch('../../controllers/chat/enviar_mensaje.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(datosEnvio)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
+        const chatContainer = document.getElementById('chatMessages');
+        chatContainer.innerHTML = '';
+        
+        if (data.success && data.mensajes.length > 0) {
+            renderizarMensajes(data.mensajes);
+        } else {
+            chatContainer.innerHTML = '<div class="text-center p-3 text-muted">Inicia la conversación.</div>';
         }
-
-        const data = await response.json();
-        console.log('Respuesta del servidor:', data);
-
-        if (data.error) {
-            console.error('Error del servidor:', data.error);
-            mostrarAlerta(`Error: ${data.error}`, 'error');
-            return false;
-        }
-
-        if (data.success) {
-            console.log('Mensaje enviado exitosamente con ID:', data.mensaje_id);
-            
-            // Agregar el ID del mensaje al Set de mensajes mostrados
-            mensajesIds.add(data.mensaje_id);
-            
-            // Actualizar la UI inmediatamente
-            const chatContainer = document.querySelector('.chat-messages');
-            if (chatContainer) {
-                const mensajeHtml = crearElementoMensaje({
-                    id: data.mensaje_id,
-                    mensaje: mensaje,
-                    es_emisor: true,
-                    emisor_nombre: userName,
-                    fecha_envio: new Date().toISOString()
-                });
-                chatContainer.appendChild(mensajeHtml);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-            return true;
-        }
-
-        return false;
     } catch (error) {
-        console.error('Error al enviar mensaje:', error);
-        mostrarAlerta(`Error al enviar el mensaje: ${error.message}`, 'error');
-        return false;
+        // console.error('Error al cargar mensajes:', error);
     }
 }
 
-// Funciones de UI móvil
-function toggleSidebar() {
-    document.getElementById('chatSidebar').classList.toggle('show');
+async function actualizarInfoChat(perroId) {
+    // Implementación para actualizar el header del chat
 }
 
-function toggleInfo() {
-    document.getElementById('chatInfo').classList.toggle('show');
+function htmlspecialchars(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/[&<>"']/g, match => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[match]);
 }
 
-// Función para mostrar alertas
-function mostrarAlerta(mensaje, tipo) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
-    alertDiv.setAttribute('role', 'alert');
-    alertDiv.innerHTML = `
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    document.querySelector('.chat-messages').appendChild(alertDiv);
-    
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 3000);
+function configurarBusqueda() {
+    // Implementación de la búsqueda
 }
 
-// Limpiar intervalo cuando se cierra la página
-window.addEventListener('beforeunload', function() {
-    if (actualizacionInterval) {
-        clearInterval(actualizacionInterval);
+async function enviarEstadoEscritura(escribiendo) {
+    if (!chatState.conversacionActivaId) return;
+    try {
+        await fetch('../../controllers/chat/estado_escritura.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                perro_id: chatState.conversacionActivaId,
+                escribiendo: escribiendo
+            })
+        });
+    } catch (error) {
+        // console.error('Error enviando estado de escritura:', error);
     }
-});
-
-// Función para actualizar el estado en línea del usuario actual
-function actualizarMiEstado() {
-    fetch('../../controllers/chat/actualizar_estado.php', {
-        method: 'POST'
-    })
-    .catch(error => console.error('Error al actualizar estado:', error));
 }
 
-// Función para obtener y actualizar estados en línea
-function actualizarEstadosEnLinea() {
-    const usuarios = document.querySelectorAll('[data-usuario-id]');
-    const usuarioIds = Array.from(usuarios).map(el => el.dataset.usuarioId);
-    
-    if (usuarioIds.length === 0) return;
-
-    fetch('../../controllers/chat/obtener_estados.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ usuarios: usuarioIds })
-    })
-    .then(response => response.json())
-    .then(estados => {
-        if (estados.error) {
-            throw new Error(estados.error);
-        }
-        usuarios.forEach(usuario => {
-            const id = usuario.dataset.usuarioId;
-            const estadoElement = usuario.querySelector('.estado-usuario');
-            if (estadoElement) {
-                estadoElement.classList.toggle('en-linea', estados[id] === true);
-                estadoElement.textContent = estados[id] ? 'En línea' : 'Desconectado';
-            }
-        });
-    })
-    .catch(error => console.error('Error al obtener estados:', error));
+function verImagenCompleta(url) {
+    Swal.fire({
+        imageUrl: url,
+        imageAlt: 'Imagen ampliada',
+        showCloseButton: true,
+        showConfirmButton: false,
+        backdrop: `rgba(0,0,0,0.8)`
+    });
 }
-
-// Función para cargar mensajes nuevos
-function cargarMensajesNuevos() {
-    const chatActivo = document.querySelector('.chat-activo');
-    if (!chatActivo) return;
-
-    const conversacionId = chatActivo.dataset.conversacionId;
-    
-    fetch(`../../controllers/chat/obtener_mensajes.php?conversacion_id=${conversacionId}&ultima_actualizacion=${ultimaActualizacion}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.mensajes && data.mensajes.length > 0) {
-                const chatContainer = document.querySelector('.mensajes-container');
-                data.mensajes.forEach(mensaje => {
-                    const mensajeHtml = crearElementoMensaje(mensaje);
-                    chatContainer.appendChild(mensajeHtml);
-                });
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-                ultimaActualizacion = data.ultima_actualizacion;
-            }
-        });
-} 

@@ -68,16 +68,4 @@ class Raza {
             throw new Exception("Error al obtener las razas");
         }
     }
-
-    public function obtenerTodasLasRazas() {
-        try {
-            $query = "SELECT id, nombre FROM razas_perros ORDER BY nombre ASC";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("Error al obtener razas: " . $e->getMessage());
-            return [];
-        }
-    }
 } 

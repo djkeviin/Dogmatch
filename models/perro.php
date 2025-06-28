@@ -13,16 +13,32 @@ class Perro {
         try {
             $this->db->beginTransaction();
 
+            // Forzar disponible_apareamiento a 1 por defecto si no está definido
+            if (!isset($data['disponible_apareamiento'])) {
+                $data['disponible_apareamiento'] = 1;
+            }
+
+            // Calcular edad en meses a partir de la fecha de nacimiento
+            $edad = null;
+            if (!empty($data['fecha_nacimiento'])) {
+                $fecha_nacimiento = new DateTime($data['fecha_nacimiento']);
+                $hoy = new DateTime();
+                $intervalo = $hoy->diff($fecha_nacimiento);
+                $edad = $intervalo->y * 12 + $intervalo->m;
+            }
+
             // Insertar el perro primero
-            $sql = "INSERT INTO perros (nombre, edad, sexo, foto, usuario_id) 
-                    VALUES (:nombre, :edad, :sexo, :foto, :usuario_id)";
+            $sql = "INSERT INTO perros (nombre, fecha_nacimiento, edad, sexo, foto, usuario_id, disponible_apareamiento) 
+                    VALUES (:nombre, :fecha_nacimiento, :edad, :sexo, :foto, :usuario_id, :disponible_apareamiento)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 ':nombre' => $data['nombre'],
-                ':edad' => $data['edad'],
+                ':fecha_nacimiento' => $data['fecha_nacimiento'],
+                ':edad' => $edad,
                 ':sexo' => $data['sexo'],
                 ':foto' => $data['foto'],
-                ':usuario_id' => $data['usuario_id']
+                ':usuario_id' => $data['usuario_id'],
+                ':disponible_apareamiento' => $data['disponible_apareamiento']
             ]);
 
             $perro_id = $this->db->lastInsertId();
@@ -125,22 +141,32 @@ public function actualizar($perro_id, $data) {
     try {
         $this->db->beginTransaction();
 
+        // Calcular edad en meses a partir de la fecha de nacimiento
+        $edad = null;
+        if (!empty($data['fecha_nacimiento'])) {
+            $fecha_nacimiento = new DateTime($data['fecha_nacimiento']);
+            $hoy = new DateTime();
+            $intervalo = $hoy->diff($fecha_nacimiento);
+            $edad = $intervalo->y * 12 + $intervalo->m;
+        }
+
         $sql = "UPDATE perros SET 
-                nombre = :nombre,
-                edad = :edad,
-                peso = :peso,
-                sexo = :sexo,
-                tamanio = :tamanio,
-                descripcion = :descripcion,
-                vacunado = :vacunado,
-                sociable_perros = :sociable_perros,
-                sociable_personas = :sociable_personas,
-                pedigri = :pedigri,
-                temperamento = :temperamento,
-                estado_salud = :estado_salud,
-                vacunas = :vacunas,
-                disponible_apareamiento = :disponible_apareamiento,
-                condiciones_apareamiento = :condiciones_apareamiento";
+            nombre = :nombre,
+            fecha_nacimiento = :fecha_nacimiento,
+            edad = :edad,
+            peso = :peso,
+            sexo = :sexo,
+            tamanio = :tamanio,
+            descripcion = :descripcion,
+            vacunado = :vacunado,
+            sociable_perros = :sociable_perros,
+            sociable_personas = :sociable_personas,
+            pedigri = :pedigri,
+            temperamento = :temperamento,
+            estado_salud = :estado_salud,
+            vacunas = :vacunas,
+            disponible_apareamiento = :disponible_apareamiento,
+            condiciones_apareamiento = :condiciones_apareamiento";
 
         // Agregar foto solo si se proporciona
         if (isset($data['foto'])) {
@@ -154,7 +180,8 @@ public function actualizar($perro_id, $data) {
         // Preparar los datos para la actualización
         $params = [
             ':nombre' => $data['nombre'],
-            ':edad' => $data['edad'],
+            ':fecha_nacimiento' => $data['fecha_nacimiento'],
+            ':edad' => $edad,
             ':peso' => $data['peso'],
             ':sexo' => $data['sexo'],
             ':tamanio' => $data['tamanio'] ?? 'mediano',
@@ -240,6 +267,27 @@ public function buscarPerrosConFiltros($usuarioId, $filtros) {
         // Calcular distancia (simulada por ahora)
         $perro['distancia'] = rand(1, $filtros['distancia']); // Simulación
         
+        // Calcular edad automáticamente si existe fecha_nacimiento
+        if (!empty($perro['fecha_nacimiento'])) {
+            $fecha_nacimiento = new DateTime($perro['fecha_nacimiento']);
+            $hoy = new DateTime();
+            $edad = $hoy->diff($fecha_nacimiento);
+            // Mostrar en años y meses
+            if ($edad->y > 0) {
+                $perro['edad_calculada'] = $edad->y . ' año' . ($edad->y > 1 ? 's' : '');
+                if ($edad->m > 0) {
+                    $perro['edad_calculada'] .= ' y ' . $edad->m . ' mes' . ($edad->m > 1 ? 'es' : '');
+                }
+            } else {
+                $perro['edad_calculada'] = $edad->m . ' mes' . ($edad->m > 1 ? 'es' : '');
+            }
+        } else if (isset($perro['edad'])) {
+            // Compatibilidad: si no hay fecha_nacimiento, usar edad manual
+            $perro['edad_calculada'] = $perro['edad'] . ' mes' . ($perro['edad'] == 1 ? '' : 'es');
+        } else {
+            $perro['edad_calculada'] = 'N/D';
+        }
+        
         // Agregar información adicional relevante
         $perro['esterilizado'] = (bool)($perro['esterilizado'] ?? false);
         $perro['vacunas'] = !empty($perro['vacunas']);
@@ -321,6 +369,35 @@ public function buscarPerros($filters = []) {
             $perro['pedigri'] = (bool)$perro['pedigri'];
             $perro['sociable_perros'] = (bool)$perro['sociable_perros'];
             $perro['raza'] = $perro['raza_nombre']; // Para mantener compatibilidad
+
+            // Calcular edad automáticamente si existe fecha_nacimiento
+            if (!empty($perro['fecha_nacimiento'])) {
+                $fecha_nacimiento = new DateTime($perro['fecha_nacimiento']);
+                $hoy = new DateTime();
+                $edad = $hoy->diff($fecha_nacimiento);
+                // Mostrar en años y meses
+                if ($edad->y > 0) {
+                    $perro['edad_calculada'] = $edad->y . ' año' . ($edad->y > 1 ? 's' : '');
+                    if ($edad->m > 0) {
+                        $perro['edad_calculada'] .= ' y ' . $edad->m . ' mes' . ($edad->m > 1 ? 'es' : '');
+                    }
+                } else {
+                    $perro['edad_calculada'] = $edad->m . ' mes' . ($edad->m > 1 ? 'es' : '');
+                }
+            } else if (isset($perro['edad'])) {
+                // Compatibilidad: si no hay fecha_nacimiento, usar edad manual
+                $perro['edad_calculada'] = $perro['edad'] . ' mes' . ($perro['edad'] == 1 ? '' : 'es');
+            } else {
+                $perro['edad_calculada'] = 'N/D';
+            }
+
+            // Si el campo disponible_apareamiento es NULL o 1, el perro es disponible por defecto
+            // Si el usuario lo cambió a 0, se respeta como no disponible
+            if (!isset($perro['disponible_apareamiento']) || $perro['disponible_apareamiento'] === null || $perro['disponible_apareamiento'] == 1) {
+                $perro['disponible_apareamiento'] = 1;
+            } else {
+                $perro['disponible_apareamiento'] = 0;
+            }
         }
 
         return $perros;
@@ -501,6 +578,47 @@ public function obtenerPorId($perro_id) {
     } catch (PDOException $e) {
         throw new Exception("Error al obtener el perfil del perro: " . $e->getMessage());
     }
+}
+
+public function obtenerPorUsuario($usuario_id) {
+    $sql = "SELECT * FROM perros WHERE usuario_id = ?";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([$usuario_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Obtiene el perro principal de un usuario para iniciar un chat o match.
+ * Por ahora, devuelve el primer perro que encuentra.
+ */
+public function obtenerPerroParaMatch($usuario_id) {
+    $sql = "SELECT id FROM perros WHERE usuario_id = :usuario_id LIMIT 1";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([':usuario_id' => $usuario_id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Verifica si existe un match confirmado entre dos perros.
+ */
+public function existeMatch($perro_id_1, $perro_id_2) {
+    $sql = "SELECT 1 FROM matches 
+            WHERE (perro_id_origen = :perro1 AND perro_id_destino = :perro2)
+               OR (perro_id_origen = :perro2 AND perro_id_destino = :perro1)
+            LIMIT 1";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([
+        ':perro1' => $perro_id_1,
+        ':perro2' => $perro_id_2
+    ]);
+    return (bool) $stmt->fetchColumn();
+}
+
+public function esMatch($perro_id_1, $perro_id_2) {
+    $sql = "SELECT id FROM matches WHERE (perro1_id = ? AND perro2_id = ? AND estado = 'aceptado') OR (perro1_id = ? AND perro2_id = ? AND estado = 'aceptado')";
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute([$perro_id_1, $perro_id_2, $perro_id_2, $perro_id_1]);
+    return $stmt->fetchColumn() > 0;
 }
 
 }

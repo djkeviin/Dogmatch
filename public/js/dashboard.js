@@ -123,11 +123,8 @@ document.addEventListener("DOMContentLoaded", function () {
             ${dog.razas ? `<small class="text-muted">Razas: ${dog.razas}</small>` : ''}
           </div>
           <div class="mt-3">
-            <button class="btn btn-sm btn-outline-primary" onclick="verPerfil(${dog.id})">
-              Ver perfil
-            </button>
-            <button class="btn btn-sm btn-outline-success" onclick="iniciarChat(${dog.id})">
-              <i class="bi bi-chat-dots"></i> Chat
+            <button class="btn btn-sm btn-outline-primary w-100" onclick="verPerfil(${dog.id})">
+              <i class="bi bi-eye"></i> Ver Perfil
             </button>
           </div>
         </div>
@@ -277,52 +274,31 @@ document.addEventListener("DOMContentLoaded", function () {
             
             perrosGrid.innerHTML += `
                 <div class="col-md-6 col-lg-4 col-xl-3">
-                    <div class="card h-100 dog-card" data-perro-id="${perro.id}">
+                    <div class="card h-100 dog-card">
                         <img src="../../public/img/${perro.foto || 'default-dog.jpg'}" 
                              class="card-img-top dog-image" 
-                             alt="${perro.nombre}"
-                             onerror="this.src='../../public/img/default-dog.jpg'">
-                        
+                             alt="${perro.nombre}">
                         <div class="card-body">
                             <h5 class="card-title d-flex justify-content-between align-items-center">
                                 ${perro.nombre}
                                 ${perro.disponible_apareamiento ? '<span class="badge bg-success">Disponible</span>' : ''}
                             </h5>
-                            
                             <p class="card-text">
-                                ${perro.razas} • 
-                                ${perro.edad} ${perro.edad == 1 ? 'mes' : 'meses'} • 
-                                ${perro.sexo}
+                                ${perro.razas || 'Sin raza'} • ${perro.edad} ${perro.edad == 1 ? 'mes' : 'meses'} • ${perro.sexo}
                             </p>
-
                             <div class="rating-stars mb-2">
                                 ${valoracionEstrellas}
                                 <small class="text-muted">(${perro.total_valoraciones || 0})</small>
                             </div>
-
-                            <div class="rating-input mb-2">
-                                <div class="stars">
-                                    ${[1,2,3,4,5].map(num => `
-                                        <i class="bi bi-star${num <= (perro.mi_valoracion || 0) ? '-fill' : ''} text-warning" 
-                                           onclick="valorarPerro(${perro.id}, ${num})"></i>
-                                    `).join('')}
-                                </div>
-                            </div>
-
                             <div class="characteristics mb-3">
                                 ${perro.vacunado ? '<span class="badge bg-info"><i class="bi bi-shield-check"></i> Vacunado</span>' : ''}
                                 ${perro.pedigri ? '<span class="badge bg-warning"><i class="bi bi-award"></i> Pedigrí</span>' : ''}
                             </div>
                         </div>
-
                         <div class="card-footer bg-white border-top-0">
                             <div class="d-flex justify-content-between">
-                                <button class="btn btn-outline-primary btn-sm flex-grow-1 me-2" 
-                                        onclick="abrirChat(${perro.id})">
-                                    <i class="bi bi-chat"></i> Chat
-                                </button>
-                                <a href="auth/perfil.php?id=${perro.id}" 
-                                   class="btn btn-primary btn-sm flex-grow-1">
+                                <a href="perfil.php?id=${perro.id}" 
+                                   class="btn btn-primary btn-sm w-100">
                                     <i class="bi bi-eye"></i> Ver Perfil
                                 </a>
                             </div>
@@ -330,24 +306,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                 </div>`;
         });
-    }
-
-    // Función para generar las estrellas de valoración
-    function generarEstrellas(valoracion) {
-        let estrellas = '';
-        const valoracionNum = parseFloat(valoracion) || 0;
-        
-        for (let i = 1; i <= 5; i++) {
-            if (i <= valoracionNum) {
-                estrellas += '<i class="bi bi-star-fill text-warning"></i>';
-            } else if (i - 0.5 <= valoracionNum) {
-                estrellas += '<i class="bi bi-star-half text-warning"></i>';
-            } else {
-                estrellas += '<i class="bi bi-star text-warning"></i>';
-            }
-        }
-        
-        return estrellas;
     }
 
     // Función para manejar la valoración de un perro
@@ -404,85 +362,105 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-// Variables globales
-let timeoutId;
-const DEBOUNCE_DELAY = 300;
+// Constantes
+const DEBOUNCE_DELAY = 500;
+let timeoutId = null;
 
-// Función para mostrar el indicador de carga
+// Funciones de utilidad
 function mostrarCarga() {
-    const contenedor = document.getElementById('perros-container');
-    contenedor.innerHTML = '<div class="text-center w-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div></div>';
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.classList.remove('d-none');
+    }
 }
 
-// Función para mostrar mensaje cuando no hay resultados
+function ocultarCarga() {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.classList.add('d-none');
+    }
+}
+
 function mostrarNoResultados() {
-    const contenedor = document.getElementById('perros-container');
-    contenedor.innerHTML = '<div class="col-12 text-center"><p class="text-muted">No se encontraron perros que coincidan con tu búsqueda.</p></div>';
+    const contenedor = document.getElementById('perrosGrid');
+    contenedor.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-emoji-frown" style="font-size: 3rem;"></i>
+            <h4 class="mt-3">No se encontraron perros</h4>
+            <p>Intenta ajustar los filtros de búsqueda</p>
+        </div>
+    `;
 }
 
-// Función para crear una card de perro
-function crearCardPerro(perro) {
-    return `
-        <div class="col-md-4 mb-4 card-perro" data-id="${perro.id}">
-            <div class="card h-100">
-                <img src="${perro.foto || 'assets/img/default-dog.jpg'}" 
-                     class="card-img-top" 
-                     alt="Foto de ${perro.nombre}"
-                     onerror="this.src='assets/img/default-dog.jpg'">
-                <div class="card-body">
-                    <h5 class="card-title">${perro.nombre}</h5>
-                    <p class="card-text">
-                        <small class="text-muted">Raza: ${perro.razas}</small><br>
-                        <small class="text-muted">Edad: ${calcularEdadEnAnos(perro.edad)} años</small><br>
-                        <small class="text-muted">Dueño: ${perro.nombre_dueno || 'No especificado'}</small>
-                    </p>
-                    <div class="valoracion mb-2">
-                        ${generarEstrellasHTML(perro.valoracion_promedio)}
-                        <small class="text-muted">(${perro.total_valoraciones} valoraciones)</small>
-                    </div>
-                    <div class="caracteristicas">
-                        ${generarCaracteristicasHTML(perro)}
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button class="btn btn-primary btn-sm" onclick="verPerfil(${perro.id})">Ver perfil</button>
-                    <button class="btn btn-outline-primary btn-sm" onclick="iniciarChat(${perro.id})">Chat</button>
-                </div>
+function mostrarError(mensaje) {
+    const contenedor = document.getElementById('perrosGrid');
+    contenedor.innerHTML = `
+        <div class="col-12">
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                ${mensaje}
             </div>
         </div>
     `;
 }
 
-// Función para generar el HTML de las características
-function generarCaracteristicasHTML(perro) {
-    const caracteristicas = [];
-    if (perro.vacunado === '1') caracteristicas.push('<span class="badge bg-success">Vacunado</span>');
-    if (perro.pedigri === '1') caracteristicas.push('<span class="badge bg-info">Pedigrí</span>');
-    if (perro.esterilizado === '1') caracteristicas.push('<span class="badge bg-warning">Esterilizado</span>');
-    return caracteristicas.join(' ');
-}
-
-// Función para calcular la edad en años
-function calcularEdadEnAnos(edadEnMeses) {
-    return (edadEnMeses / 12).toFixed(1);
-}
-
-// Función para generar estrellas HTML
-function generarEstrellasHTML(valoracion) {
-    const estrellas = [];
-    const valoracionRedondeada = Math.round(valoracion * 2) / 2;
+function generarEstrellas(valoracion) {
+    let estrellas = '';
+    const valoracionNum = parseFloat(valoracion) || 0;
     
     for (let i = 1; i <= 5; i++) {
-        if (valoracionRedondeada >= i) {
-            estrellas.push('<i class="fas fa-star text-warning"></i>');
-        } else if (valoracionRedondeada >= i - 0.5) {
-            estrellas.push('<i class="fas fa-star-half-alt text-warning"></i>');
+        if (i <= valoracionNum) {
+            estrellas += '<i class="bi bi-star-fill text-warning"></i>';
+        } else if (i - 0.5 <= valoracionNum) {
+            estrellas += '<i class="bi bi-star-half text-warning"></i>';
         } else {
-            estrellas.push('<i class="far fa-star text-warning"></i>');
+            estrellas += '<i class="bi bi-star text-warning"></i>';
         }
     }
-    
-    return estrellas.join('');
+    return estrellas;
+}
+
+// Función para cargar los filtros
+async function cargarFiltros() {
+    try {
+        const response = await fetch('../../api/filtros.php');
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Error al cargar los filtros');
+        }
+
+        // Cargar razas
+        const filtroRaza = document.getElementById('filtroRaza');
+        if (filtroRaza && data.filtros.razas) {
+            filtroRaza.innerHTML = '<option value="">Todas las razas</option>' +
+                data.filtros.razas.map(raza => 
+                    `<option value="${raza.id}">${raza.nombre}</option>`
+                ).join('');
+        }
+
+        // Cargar rangos de edad
+        const filtroEdad = document.getElementById('filtroEdad');
+        if (filtroEdad && data.filtros.rangos_edad) {
+            filtroEdad.innerHTML = '<option value="">Cualquier edad</option>' +
+                data.filtros.rangos_edad.map(rango => 
+                    `<option value="${rango.rango_edad}">${rango.rango_edad} meses (${rango.total})</option>`
+                ).join('');
+        }
+
+        // Cargar valoraciones
+        const filtroValoracion = document.getElementById('filtroValoracion');
+        if (filtroValoracion && data.filtros.valoraciones) {
+            filtroValoracion.innerHTML = '<option value="">Cualquier valoración</option>' +
+                data.filtros.valoraciones.map(val => 
+                    `<option value="${val.valoracion}">${val.valoracion}+ estrellas (${val.total})</option>`
+                ).join('');
+        }
+
+    } catch (error) {
+        console.error('Error al cargar filtros:', error);
+        mostrarError('Error al cargar los filtros. Por favor, recarga la página.');
+    }
 }
 
 // Función principal para filtrar perros
@@ -490,12 +468,12 @@ async function filtrarPerros() {
     mostrarCarga();
     
     const busqueda = document.getElementById('busqueda').value;
-    const raza = document.getElementById('raza').value;
-    const edad = document.getElementById('edad').value;
-    const valoracion = document.getElementById('valoracion').value;
+    const raza = document.getElementById('filtroRaza').value;
+    const edad = document.getElementById('filtroEdad').value;
+    const valoracion = document.getElementById('filtroValoracion').value;
 
     try {
-        const response = await fetch('api/filtrar_perros.php', {
+        const response = await fetch('../../api/filtrar_perros.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -508,15 +486,19 @@ async function filtrarPerros() {
             })
         });
 
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
         const data = await response.json();
         
         if (!data.success) {
             throw new Error(data.error || 'Error al filtrar perros');
         }
 
-        const contenedor = document.getElementById('perros-container');
+        const contenedor = document.getElementById('perrosGrid');
         
-        if (data.perros.length === 0) {
+        if (!data.perros || data.perros.length === 0) {
             mostrarNoResultados();
             return;
         }
@@ -531,28 +513,82 @@ async function filtrarPerros() {
 
     } catch (error) {
         console.error('Error:', error);
-        const contenedor = document.getElementById('perros-container');
-        contenedor.innerHTML = '<div class="alert alert-danger">Error al cargar los perros. Por favor, intenta de nuevo más tarde.</div>';
+        mostrarError('Error al cargar los perros. Por favor, intenta de nuevo más tarde.');
+    } finally {
+        ocultarCarga();
     }
 }
 
 // Event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Cargar perros inicialmente
-    filtrarPerros();
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Cargar filtros primero
+        await cargarFiltros();
+        
+        // Luego cargar perros
+        await filtrarPerros();
 
-    // Configurar event listeners para los filtros
-    const filtros = ['busqueda', 'raza', 'edad', 'valoracion'];
-    
-    filtros.forEach(filtroId => {
-        const elemento = document.getElementById(filtroId);
-        if (elemento) {
-            elemento.addEventListener('input', (e) => {
-                clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
-                    filtrarPerros();
-                }, DEBOUNCE_DELAY);
+        // Configurar event listeners para los filtros
+        const filtros = ['busqueda', 'filtroRaza', 'filtroEdad', 'filtroValoracion'];
+        
+        filtros.forEach(filtroId => {
+            const elemento = document.getElementById(filtroId);
+            if (elemento) {
+                elemento.addEventListener('input', () => {
+                    clearTimeout(timeoutId);
+                    timeoutId = setTimeout(filtrarPerros, DEBOUNCE_DELAY);
+                });
+            }
+        });
+
+        // Manejar el envío del formulario
+        const filtrosForm = document.getElementById('filtrosForm');
+        if (filtrosForm) {
+            filtrosForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                filtrarPerros();
             });
         }
-    });
+    } catch (error) {
+        console.error('Error en la inicialización:', error);
+        mostrarError('Error al inicializar la página. Por favor, recarga.');
+    }
 });
+
+function crearCardPerro(perro) {
+    return `
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 dog-card">
+                <img src="../../public/img/${perro.foto || 'default-dog.jpg'}" 
+                     class="card-img-top dog-image" 
+                     alt="${perro.nombre}">
+                <div class="card-body">
+                    <h5 class="card-title d-flex justify-content-between align-items-center">
+                        ${perro.nombre}
+                        ${perro.disponible_apareamiento ? '<span class="badge bg-success">Disponible</span>' : ''}
+                    </h5>
+                    <p class="card-text">
+                        ${perro.razas || 'Sin raza'} • ${perro.edad} ${perro.edad == 1 ? 'mes' : 'meses'} • ${perro.sexo}
+                    </p>
+                    <div class="rating-stars mb-2">
+                        ${generarEstrellas(perro.valoracion_promedio)}
+                        <small class="text-muted">(${perro.total_valoraciones || 0})</small>
+                    </div>
+                    <div class="characteristics mb-3">
+                        ${perro.vacunado ? '<span class="badge bg-info"><i class="bi bi-shield-check"></i> Vacunado</span>' : ''}
+                        ${perro.pedigri ? '<span class="badge bg-warning"><i class="bi bi-award"></i> Pedigrí</span>' : ''}
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-top-0">
+                    <div class="d-flex justify-content-between">
+                        <a href="perfil.php?id=${perro.id}" 
+                           class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-eye"></i> Ver Perfil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+

@@ -2,8 +2,12 @@
 session_start();
 require_once '../../config/conexion.php';
 require_once '../../models/Mensaje.php';
+require_once '../../models/Perro.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET');
+header('Access-Control-Allow-Headers: Content-Type');
 
 // Verificar si el usuario está autenticado
 if (!isset($_SESSION['usuario_id'])) {
@@ -22,7 +26,13 @@ if (!$perro_id) {
 
 try {
     $mensajeModel = new Mensaje();
-    $mensajes = $mensajeModel->obtenerMensajes($perro_id, $_SESSION['usuario_id'], $ultima_actualizacion);
+    $perroModel = new Perro();
+    $mi_perro = $perroModel->obtenerUnicoPorUsuarioId($_SESSION['usuario_id']);
+    if (!$mi_perro) {
+        echo json_encode(['error' => 'No tienes un perro propio']);
+        exit;
+    }
+    $mensajes = $mensajeModel->obtenerMensajesEntrePerros($mi_perro['id'], $perro_id, $ultima_actualizacion);
 
     // Procesar los mensajes para incluir información adicional
     foreach ($mensajes as &$mensaje) {
